@@ -395,7 +395,7 @@ button.link{background:none;border:none;box-shadow:none;padding:0;font-family:va
 .gkey b{color:var(--fg);font-weight:600}
 .gkey i{font-style:normal;color:var(--line);padding:0 2px}
 .panel.fg .grid button small{display:none}
-.back4{display:block;width:100%;margin-top:10px;padding:10px;font-size:14px;background:transparent;color:var(--fg);border:1px solid rgba(255,255,255,.3);box-shadow:none;border-radius:12px}
+.back4{flex:none;margin:-4px 0;padding:6px 10px;font-size:13px;background:transparent;color:var(--fg);border:1px solid rgba(255,255,255,.3);box-shadow:none;border-radius:12px}
 .ghead{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .glabel{font-family:var(--display);font-weight:800;font-style:italic;font-size:19px;letter-spacing:.03em;color:var(--acc)}
 .gleft{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.06em;text-transform:uppercase}
@@ -479,11 +479,10 @@ button.link{background:none;border:none;box-shadow:none;padding:0;font-family:va
   </div>
 
   <div class="panel" id="guessBox" hidden>
-    <div class="ghead"><span class="glabel" id="gLabel">CALL YOUR PLAY</span><span class="gleft" id="gLeft"></span></div>
+    <div class="ghead"><span class="glabel" id="gLabel">CALL YOUR PLAY</span><span class="gleft" id="gLeft"></span><button type="button" class="back4" id="bBack4" hidden>← PUNT / KICK</button></div>
     <div class="gkey" id="gKey"></div>
     <div class="track" id="track"><div class="fill" id="fill"></div></div>
     <div class="grid" id="grid"></div>
-    <button type="button" class="back4" id="bBack4" hidden>← CHANGE THE CALL · punt or kick instead</button>
   </div>
 
   <div class="final" id="overBox" hidden>
@@ -1021,7 +1020,7 @@ function render(){
       blk:  ['BLOCK THE KICK', 'One guess', '<b>Exact</b> = BLOCKED <i>·</i> <b>Miss</b> = they almost always make it'],
       stop2:['STOP THE 2', 'Within ±6', '<b>Within 6</b> = stopped <i>·</i> <b>Miss</b> = they get 2'],
       onside:['ONSIDE KICK', 'Within ±2', '<b>Within 2</b> = you recover <i>·</i> <b>Miss</b> = their ball near midfield']};
-    if(SP[S.mode]) $('bBack4').hidden=true;
+    if(SP[S.mode]){ $('bBack4').hidden=true; $('gLeft').hidden=false; }
     if(SP[S.mode]){
       panel.className='panel fg'; buildGrid(MAX);
       $('gLabel').textContent=SP[S.mode][0];
@@ -1038,7 +1037,7 @@ function render(){
         ? '<b>Hit it</b> = '+(S.down<=2?'INTERCEPTION':S.down===3?'SACK (−7)':'STOP')+' <i>·</i> <b>One away</b> = no gain <i>·</i> <b>Within 4</b> = +3–5 <i>·</i> <b>Miss</b> = +7–10 <i>·</i> <b>15+ off</b> = big play <i>·</i> <b>20+ off</b> = TD'
         : go4() ? '<b>Hit it</b> = first down + tile yards <i>·</i> <b>1 away</b> = +3 <i>·</i> <b>2 away</b> = +2 <i>·</i> <b>3 away</b> = +1 <i>·</i> <b>Else</b> = turnover'
         : '<b>Hit it</b> = yards on the tile <i>·</i> <b>Within 2</b> = +4 <i>·</i> <b>Within 5</b> = +2 <i>·</i> <b>15+ off</b> = loss';
-      $('bBack4').hidden=!go4();
+      $('bBack4').hidden=!go4(); $('gLeft').hidden=go4();
       for(let i=1;i<=MAX;i++){ const s=$('n'+i).querySelector('small'); if(s) s.textContent='+'+tileY(i); }
       fill.style.left=((r.lo-1)/MAX*100)+'%'; fill.style.width=(left/MAX*100)+'%';
       r.wrong.forEach(n=>{ const t=document.createElement('i'); t.className='tick'; t.style.left=((n-.5)/MAX*100)+'%'; tr.appendChild(t); });
