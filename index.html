@@ -838,7 +838,7 @@ function tap(n){
       else { youBall(ny); S.st.fd++; notes.push('First down. New number.'); }
     } else {
       // Way off loses yards: 15-19 off = tackle for loss, 20+ off = sack. Only edge guesses can be that far off.
-      let gain=d<=2?6:d<=5?2:0; if(gain) gain=snowy(gain+upgLvl('line'));
+      let gain=d<=2?Math.round(6*shrink()):d<=5?Math.max(1,Math.round(2*shrink())):0; if(gain) gain=snowy(gain+upgLvl('line'));
       if(d>=20) gain=-ri(7,10); else if(d>=15) gain=-ri(3,5);
       const up=n<r.secret; narrow(n); num=n+(up?'▲':'▼'); title=(up?'HIGHER':'LOWER')+' THAN '+n;
       notes.push(gain>0?(d<=2?'So close. ':'Warm. ')+'+'+gain+' yds.':gain<0?(d>=20?'Way off. SACKED! ':'Wrong way. Tackle for loss. ')+gain+' yds.':'No gain.'); notes.push('The D shifts.');
@@ -905,6 +905,8 @@ function trapHit(from,notes){ const r=S.ser, fum=rf()<.5; let title; S.pstk=0;
   tick(notes); prompt(notes); setBanner('💥',title,notes.join(' ')); animate(from,S.y); render(); }
 const stopR=()=>S.togo<=1?1:S.togo<=2?2:3;
 const go4=()=>S.mode==='off'&&S.down===4&&S.goFor&&S.phase==='guess';
+// Near misses pay less as the range shrinks (hits always pay the full tile and move the chains). Full value with 9+ left, then 85%, 65%, 50%.
+function shrink(){ const r=S.ser; if(!r) return 1; const left=r.hi-r.lo+1; return left>=9?1:left>=6?.85:left>=4?.65:.5; }
 function tileY(n){ return go4() ? S.togo+Math.round(2+Math.abs(n-13)/12*13) : yds(n); }
 
 function kick(n){
@@ -1084,7 +1086,7 @@ function render(){
 
   if(S.phase==='fourth'){
     const k=117-S.y, tol=fgT(k);
-    $('goSub').textContent='D reloads · '+Math.max(7,S.ser.hi-S.ser.lo+1)+' numbers in play';
+    $('goSub').textContent='D reloads · '+Math.max(9,S.ser.hi-S.ser.lo+1)+' numbers in play';
     $('bFG').disabled=tol<0; $('fgSub').textContent=tol<0?'Too far':k+' yds · '+(tol?'±'+tol:'exact');
   }
   if(S.phase==='guess'){
@@ -1116,7 +1118,7 @@ function render(){
         ? S.down===4 ? '<b>4th & '+S.togo+'</b> <i>·</i> <b>Within '+stopR()+'</b> = STOP <i>·</i> <b>Else</b> = they convert'
         : '<b>Hit it</b> = '+(S.down<=2?'INTERCEPTION':S.down===3?'SACK (−7)':'STOP')+' <i>·</i> <b>One away</b> = loss <i>·</i> <b>Within 4</b> = +4–6 <i>·</i> <b>Miss</b> = +8–11 <i>·</i> <b>15+ off</b> = big play <i>·</i> <b>20+ off</b> = TD'
         : go4() ? '<b>Hit it</b> = first down + tile yards <i>·</i> <b>1 away</b> = +3 <i>·</i> <b>2 away</b> = +2 <i>·</i> <b>3 away</b> = +1 <i>·</i> <b>Else</b> = turnover'
-        : '<b>Hit it</b> = yards on the tile <i>·</i> <b>Within 2</b> = +6 <i>·</i> <b>Within 5</b> = +2 <i>·</i> <b>15+ off</b> = loss';
+        : '<b>Hit it</b> = yards on the tile <i>·</i> <b>Within 2</b> = +'+Math.round(6*shrink())+' <i>·</i> <b>Within 5</b> = +'+Math.max(1,Math.round(2*shrink()))+' <i>·</i> <b>15+ off</b> = loss'+(shrink()<1?' <i>·</i> <b>Few left</b> = smaller near misses':'');
       $('bBack4').hidden=!go4(); $('gLeft').hidden=go4();
       for(let i=1;i<=MAX;i++){ const s=$('n'+i).querySelector('small'); if(s) s.textContent='+'+tileY(i); }
       fill.style.left=((r.lo-1)/MAX*100)+'%'; fill.style.width=(left/MAX*100)+'%';
