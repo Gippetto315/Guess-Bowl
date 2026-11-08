@@ -88,6 +88,8 @@ button small{display:block;font-family:var(--body);font-weight:400;letter-spacin
 .seg button{padding:10px;font-size:16px;box-shadow:none}
 .seg button.on{background:var(--gold);color:#1b1500;border-color:var(--gold-d)}
 .seg.three{grid-template-columns:repeat(3,1fr)}
+.seg.four{grid-template-columns:repeat(4,1fr)}.seg.four button{font-size:12px;padding:9px 1px;letter-spacing:.02em}
+.hist .srow .rs.gold{color:var(--gold)}
 .seg.three button{font-size:14px;padding:9px 2px}
 .sbody{display:flex;flex-direction:column;gap:8px}
 .ck.conf{margin-top:6px;color:var(--gold)}
@@ -666,7 +668,7 @@ button.link{background:none;border:none;box-shadow:none;padding:0;font-family:va
 <div class="screen scroll" id="seasonScreen" hidden>
   <div class="shead"><div><div class="ck">Your record</div><div class="big" id="sRec">0–0</div></div><div class="cs" id="sWeek"></div></div>
   <div class="prog"><i id="sProg"></i></div>
-  <div class="seg three"><button id="sv-schedule">SCHEDULE</button><button id="sv-standings">STANDINGS</button><button id="sv-playoffs">PLAYOFFS</button></div>
+  <div class="seg four"><button id="sv-schedule">SCHEDULE</button><button id="sv-standings">STANDINGS</button><button id="sv-playoffs">PLAYOFFS</button><button id="sv-history">CAREER</button></div>
   <div id="seasonBody" class="sbody"></div>
   <div class="row"><button class="snap" id="bSeasonPlay2">PLAY</button></div>
   <div class="row"><button id="bNewSeason">NEW SEASON</button></div>
@@ -814,7 +816,7 @@ function tap(n){
       else { youBall(ny); S.st.fd++; notes.push('First down. New number.'); }
     } else {
       // Way off loses yards: 15-19 off = tackle for loss, 20+ off = sack. Only edge guesses can be that far off.
-      let gain=d<=2?4:d<=5?2:0; if(gain) gain=snowy(gain+upgLvl('line'));
+      let gain=d<=2?6:d<=5?2:0; if(gain) gain=snowy(gain+upgLvl('line'));
       if(d>=20) gain=-ri(7,10); else if(d>=15) gain=-ri(3,5);
       const up=n<r.secret; narrow(n); num=n+(up?'▲':'▼'); title=(up?'HIGHER':'LOWER')+' THAN '+n;
       notes.push(gain>0?(d<=2?'So close. ':'Warm. ')+'+'+gain+' yds.':gain<0?(d>=20?'Way off. SACKED! ':'Wrong way. Tackle for loss. ')+gain+' yds.':'No gain.'); notes.push('The D shifts.');
@@ -837,7 +839,7 @@ function tap(n){
       // A near miss still gets a hand on them: one away = +1, within 3 = +2.
       // Defense mirrors offense: the closer your read, the less they get. One away stuffs them; way off (15+) gets you burned.
       if(d>=20){ const up=n<r.secret; num=n+(up?'▲':'▼'); title='BUSTED COVERAGE!'; S.pf.push(['BUSTED COVERAGE',S.opp+' take it the distance','cpu']); notes.push('Way off. Nobody home. Touchdown from '+(S.y)+' out.'); cpuTD(notes); tick(notes); prompt(notes); setBanner(num,title,notes.join(' ')); animate(from,S.y); render(); return; }
-      const deep=d>=15, gain= d<=1?-ri(1,3) : d<=4?snowy(ri(3,5)) : d<=14?snowy(ri(7,10)) : d<=19?snowy(ri(11,15)) : snowy(ri(16,26));
+      const deep=d>=15, gain= d<=1?-ri(1,3) : d<=4?snowy(ri(4,6)) : d<=14?snowy(ri(8,11)) : d<=19?snowy(ri(11,15)) : snowy(ri(16,26));
       const up=n<r.secret; narrow(n); num=n+(up?'▲':'▼'); title=(up?'HIGHER':'LOWER')+' THAN '+n;
       if(deep) S.pf.push(['BIG PLAY',S.opp+' +'+gain+' yards','cpu']); else if(d<=1) S.pf.push(['TACKLE FOR LOSS',S.opp+' lose '+(-gain),'gold']);
       notes.push(d<=1?'One away. Tackle for loss, they lose '+(-gain)+'.':deep?'Way off. Big play, they gain '+gain+'.':'They gain '+gain+'. They shift.');
@@ -1071,9 +1073,9 @@ function render(){
       $('gLabel').textContent=S.mode==='def'?'STOP THEIR DRIVE':'CALL YOUR PLAY';
       $('gLeft').textContent=left===1?'1 number left':left+' numbers left';
       $('gKey').innerHTML = S.mode==='def'
-        ? '<b>Hit it</b> = '+(S.down<=2?'INTERCEPTION':S.down===3?'SACK (−7)':'STOP')+' <i>·</i> <b>One away</b> = no gain <i>·</i> <b>Within 4</b> = +3–5 <i>·</i> <b>Miss</b> = +7–10 <i>·</i> <b>15+ off</b> = big play <i>·</i> <b>20+ off</b> = TD'
+        ? '<b>Hit it</b> = '+(S.down<=2?'INTERCEPTION':S.down===3?'SACK (−7)':'STOP')+' <i>·</i> <b>One away</b> = loss <i>·</i> <b>Within 4</b> = +4–6 <i>·</i> <b>Miss</b> = +8–11 <i>·</i> <b>15+ off</b> = big play <i>·</i> <b>20+ off</b> = TD'
         : go4() ? '<b>Hit it</b> = first down + tile yards <i>·</i> <b>1 away</b> = +3 <i>·</i> <b>2 away</b> = +2 <i>·</i> <b>3 away</b> = +1 <i>·</i> <b>Else</b> = turnover'
-        : '<b>Hit it</b> = yards on the tile <i>·</i> <b>Within 2</b> = +4 <i>·</i> <b>Within 5</b> = +2 <i>·</i> <b>15+ off</b> = loss';
+        : '<b>Hit it</b> = yards on the tile <i>·</i> <b>Within 2</b> = +6 <i>·</i> <b>Within 5</b> = +2 <i>·</i> <b>15+ off</b> = loss';
       $('bBack4').hidden=!go4(); $('gLeft').hidden=go4();
       for(let i=1;i<=MAX;i++){ const s=$('n'+i).querySelector('small'); if(s) s.textContent='+'+tileY(i); }
       fill.style.left=((r.lo-1)/MAX*100)+'%'; fill.style.width=(left/MAX*100)+'%';
@@ -1436,9 +1438,12 @@ function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=ri(0,i); [a[i],a[j]]
 function blankGame(){ return {td:0,fd:0,hits:0,hitDown:0,long:0,yds:0,fgm:0,fga:0,punts:0,tod:0,take:0,sacks:0,xpm:0,xpa:0,twoM:0,twoA:0,rettd:0,onsA:0,onsM:0,lfg:0,edge:0}; }
 function blankStats(){ return Object.assign({games:0,w:0,l:0,t:0,pf:0,pa:0},blankGame()); }
 
-function freshSeason(){
+// Career: a new season keeps the same league (teams drift a little in strength); only records and the schedule reset.
+function freshSeason(prev){
   const names=shuffle(NAMES.slice());
-  const teams=[{name:myName(),short:ME(),user:true,rating:65}].concat(names.map(n=>({name:n,short:short(n),rating:ri(40,90)})));
+  const teams= prev&&prev.teams&&prev.teams.length===32
+    ? prev.teams.map((t,i)=>i?{name:t.name,short:t.short,rating:Math.max(40,Math.min(90,t.rating+ri(-8,8)))}:{name:myName(),short:ME(),user:true,rating:65})
+    : [{name:myName(),short:ME(),user:true,rating:65}].concat(names.map(n=>({name:n,short:short(n),rating:ri(40,90)})));
   teams.forEach((t,i)=>Object.assign(t,{conf:i<16?0:1,div:Math.floor((i%16)/4),w:0,l:0,t:0,pf:0,pa:0}));
   // 17 games: 6 vs division rivals (home and away), 7 more in conference, 4 vs the other conference
   const rivals=[1,2,3], conf=shuffle([...Array(12)].map((_,i)=>i+4)).slice(0,7), other=shuffle([...Array(16)].map((_,i)=>i+16)).slice(0,4);
@@ -1490,11 +1495,20 @@ function finishRound(){
   const po=SE().po, G=po.games[po.round];
   G.forEach(g=>{ if(g.sa==null){ const [sa,sb]=simScore(g.a,g.b,true); g.sa=sa; g.sb=sb; } g.w=g.sa>g.sb?g.a:g.b; });
   if(po.round===2 && G.some(g=>g.w===0)) trophies().conf++;
-  if(po.round===3){ po.champ=G[0].w; if(po.champ===0){ trophies().rings.push(SAVE.seasonNo||1); unlock('ring'); } }
+  if(po.round===3){ po.champ=G[0].w; if(po.champ===0){ trophies().rings.push(SAVE.seasonNo||1); unlock('ring'); } logSeason(); }
   else { [0,1].forEach(c=>{ po.alive[c]=po.alive[c].filter(i=>!G.some(g=>g.conf===c&&(g.a===i||g.b===i)&&g.w!==i)); }); po.round++; makeRound(); }
   persist();
 }
 
+const yearOf=n=>2025+(n||1);
+// How your season ended, for the franchise history.
+function finishTxt(){ const po=SE().po; if(!po) return ''; if(po.champ===0) return 'Super Bowl Champions';
+  if(seedOf(0)<=0) return 'Missed playoffs';
+  for(let r=3;r>=0;r--){ const g=(po.games[r]||[]).find(g=>(g.a===0||g.b===0)&&g.sa!=null); if(g) return g.w===0?'Won '+ROUNDS[r]:'Lost in '+(r===3?'the Super Bowl':ROUNDS[r].replace('CONF. CHAMPIONSHIP','Conf. Championship').replace('WILD CARD','Wild Card').replace('DIVISIONAL','Divisional')); }
+  return 'Playoffs'; }
+function logSeason(){ SAVE.history=SAVE.history||[]; const n=SAVE.seasonNo||1; if(SAVE.history.some(h=>h.n===n)) return;
+  SAVE.history.push({n,year:yearOf(n),rec:rec(TM(0)),fin:finishTxt(),seed:seedOf(0),mode:SE().mode||'pure'}); }
+function nextSeason(){ SAVE.seasonNo=(SAVE.seasonNo||1)+1; SAVE.season=freshSeason(SAVE.season); confirmNew=false; persist(); seasonView='schedule'; refresh(); }
 function addTo(T){ T.games++; T.pf+=S.you; T.pa+=S.cpu;
   if(S.you>S.cpu) T.w++; else if(S.you<S.cpu) T.l++; else T.t++;
   for(const k in S.st){ if(k==='long'||k==='lfg') T[k]=Math.max(T[k]||0,S.st[k]||0); else T[k]=(T[k]||0)+(S.st[k]||0); } }
@@ -1537,10 +1551,10 @@ const rec=T=>T.w+'–'+T.l+(T.t?'–'+T.t:'');
 // What the season's main button should do right now
 function seasonStatus(){
   const se=SE(), w=se.results.length;
-  if(w===0 && !se.mode) return {lab:'NEW SEASON',title:'Choose your season',sub:'Pure football or upgrades. Whatever you pick, you\'re locked in for all 17 games and the playoffs.',choose:true,btn:'CHOOSE ON HOME',go:()=>showTab('play')};
+  if(w===0 && !se.mode) return {lab:yearOf(SAVE.seasonNo)+' SEASON',title:'Choose your season',sub:'Pure football or upgrades. Whatever you pick, you\'re locked in for all 17 games and the playoffs.',choose:true,btn:'CHOOSE ON HOME',go:()=>showTab('play')};
   if(w<WEEKS){ const o=TM(se.sched[w]); return {lab:'WEEK '+(w+1)+' OF '+WEEKS,opp:se.sched[w],title:'Week '+(w+1)+' vs '+o.name, sub:'Record '+rec(TM(0))+' · '+(WEEKS-w)+' games left', btn:'PLAY WEEK '+(w+1), go:()=>newGame('season',se.sched[w])}; }
   const po=se.po;
-  if(po.champ!=null) return {lab:'SEASON COMPLETE',title:po.champ===0?'SUPER BOWL CHAMPIONS!':TM(po.champ).name+' won it all', sub:'Final record '+rec(TM(0))+'. Start a new season anytime.', btn:null};
+  if(po.champ!=null){ const ny=yearOf((SAVE.seasonNo||1)+1); return {lab:yearOf(SAVE.seasonNo)+' SEASON COMPLETE',title:po.champ===0?'SUPER BOWL CHAMPIONS!':finishTxt(), sub:'Final record '+rec(TM(0))+'. Same league, fresh records. Your career rolls on.', btn:'START '+ny+' SEASON', go:nextSeason}; }
   const g=userGame(), rn=ROUNDS[po.round];
   if(g){ const o=g.a===0?g.b:g.a; return {lab:rn,opp:o,title:rn+' vs '+TM(o).name, sub:'You are the '+ordinal(seedOf(0))+' seed. Win or go home.', btn:'PLAY '+rn, go:()=>newGame('playoff',o)}; }
   const inIt=seedOf(0)>0, alive=po.alive.flat().includes(0)||(po.round===3&&po.games[3][0]&&(po.games[3][0].a===0||po.games[3][0].b===0));
@@ -1593,12 +1607,16 @@ function renderSeason(){
   $('sRec').textContent=rec(TM(0));
   $('sWeek').textContent= w<WEEKS ? 'Week '+(w+1)+' of '+WEEKS : se.po.champ!=null ? 'Season over' : 'Playoffs · '+ROUNDS[se.po.round];
   $('sProg').style.width=(Math.min(w,WEEKS)/WEEKS*100)+'%';
-  ['schedule','standings','playoffs'].forEach(v=>$('sv-'+v).classList.toggle('on',seasonView===v));
+  ['schedule','standings','playoffs','history'].forEach(v=>$('sv-'+v).classList.toggle('on',seasonView===v));
   let h='';
   if(seasonView==='schedule'){
     h='<div class="sched">'+se.sched.map((o,i)=>{ const r=se.results[i];
       const rs = r ? '<span class="rs '+(r.you>r.cpu?'w':r.you<r.cpu?'l':'')+'">'+(r.you>r.cpu?'W':r.you<r.cpu?'L':'T')+' '+r.you+'–'+r.cpu+'</span>' : '<span class="rs">'+(i===w?'NEXT':'—')+'</span>';
       return '<div class="srow'+(i===w?' next':'')+'"><span class="wk">WK '+(i+1)+'</span><span class="tm">'+L(TM(o))+TM(o).name+'</span>'+rs+'</div>'; }).join('')+'</div>';
+  } else if(seasonView==='history'){
+    const H=(SAVE.history||[]).slice().reverse(), tr=trophies(), C=SAVE.career||{};
+    h='<div class="card"><div class="ct">'+myName()+'</div><div class="cs">Season '+(SAVE.seasonNo||1)+' · '+yearOf(SAVE.seasonNo)+' · Career '+(C.games?C.w+'–'+C.l+(C.t?'–'+C.t:''):'0–0')+' · '+tr.rings.length+' Super Bowl'+(tr.rings.length===1?'':'s')+'</div></div>';
+    h+='<div class="ck conf">FRANCHISE HISTORY</div><div class="sched hist">'+(H.length?H.map(x=>'<div class="srow'+(x.fin==='Super Bowl Champions'?' me':'')+'"><span class="wk">'+x.year+'</span><span class="tm">'+x.rec+(x.mode==='upg'?' · Upgrades':'')+'</span><span class="rs'+(x.fin==='Super Bowl Champions'?' gold':'')+'">'+(x.fin==='Super Bowl Champions'?'🏆 CHAMPS':x.fin)+'</span></div>').join(''):'<div class="srow"><span class="tm">Finish a season to start your history.</span></div>')+'</div>';
   } else if(seasonView==='standings'){
     [0,1].forEach(c=>{ h+='<div class="ck conf">'+CONFS[c]+' CONFERENCE</div>';
       DIVS.forEach((d,di)=>{ const ids=[...Array(16)].map((_,i)=>i+c*16).filter(i=>TM(i).div===di).sort(better);
@@ -1619,7 +1637,8 @@ function renderSeason(){
   }
   $('seasonBody').innerHTML=h;
   $('bSeasonPlay2').hidden=!st.btn; if(st.btn) $('bSeasonPlay2').textContent=st.btn;
-  $('bNewSeason').textContent=confirmNew?'TAP AGAIN TO RESET SEASON':'NEW SEASON';
+  const done=se.po&&se.po.champ!=null; $('bNewSeason').hidden=done;
+  $('bNewSeason').textContent=confirmNew?'TAP AGAIN · THIS SEASON WILL BE LOST':'RESTART THIS SEASON';
 }
 function renderStats(){
   $('segSeason').classList.toggle('on',statView==='season'); $('segCareer').classList.toggle('on',statView==='career');
@@ -1665,8 +1684,8 @@ nameInputs();
 $('bSeasonPlay').onclick=$('bSeasonPlay2').onclick=()=>{ const st=seasonStatus(); if(st.go) st.go(); };
 $('bQuick').onclick=()=>newGame('quick',ri(1,31));
 $('tSeason').onclick=()=>showTab('season'); $('tTro').onclick=()=>showTab('trophies'); $('tStats').onclick=()=>showTab('stats');
-$('bNewSeason').onclick=()=>{ if(!confirmNew){ confirmNew=true; return renderSeason(); } confirmNew=false; SAVE.seasonNo=(SAVE.seasonNo||1)+1; SAVE.season=freshSeason(); persist(); renderSeason(); };
-['schedule','standings','playoffs'].forEach(v=>$('sv-'+v).onclick=()=>{ seasonView=v; renderSeason(); });
+$('bNewSeason').onclick=()=>{ if(!confirmNew){ confirmNew=true; return renderSeason(); } confirmNew=false; SAVE.season=freshSeason(SAVE.season); persist(); renderSeason(); };
+['schedule','standings','playoffs','history'].forEach(v=>$('sv-'+v).onclick=()=>{ seasonView=v; renderSeason(); });
 $('segSeason').onclick=()=>{ statView='season'; renderStats(); };
 $('segCareer').onclick=()=>{ statView='career'; renderStats(); };
 
