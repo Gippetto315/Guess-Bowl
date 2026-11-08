@@ -184,6 +184,10 @@ button.link{background:none;border:none;box-shadow:none;padding:0;font-family:va
 .coach{position:absolute;left:8px;right:8px;top:8px;z-index:6;display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:12px;background:rgba(9,16,12,.93);border:1px solid var(--gold);box-shadow:0 10px 24px rgba(0,0,0,.5);animation:pop .3s ease}
 .coach .ctx{flex:1;min-width:0;font-size:13px;line-height:1.35;color:var(--fg)}
 .coach button{flex:none;padding:8px 10px;font-size:14px;background:var(--gold);color:#1b1500;border-color:var(--gold-d);box-shadow:0 3px 0 var(--gold-d)}
+.coach .cbtns{flex:none;display:flex;flex-direction:column;gap:8px;width:112px}
+.coach .cbtns button{width:100%}
+.coach button.skip small{display:block;font-size:10px;letter-spacing:.08em;opacity:.8;margin-top:1px}
+.coach button.skip{background:transparent;color:var(--fg);border-color:rgba(255,255,255,.35);box-shadow:none;opacity:.85}
 .switch{flex:none;width:54px;height:32px;padding:3px;border-radius:16px;background:#070c1c;border:1px solid var(--line);box-shadow:inset 0 2px 4px rgba(0,0,0,.5);position:relative}
 .switch i{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#8d98bf;transition:left .2s ease,background .2s}
 .switch.on{background:#3a300a;border-color:var(--gold-d)} .switch.on i{left:25px;background:var(--gold)}
@@ -432,7 +436,7 @@ button.link{background:none;border:none;box-shadow:none;padding:0;font-family:va
   </div>
 
   <div class="stage"><canvas id="field" aria-label="Football field"></canvas><div class="flash" id="flash" aria-live="polite"><div class="fb"><div class="fw" id="fw"></div><div class="fs2" id="fs2"></div></div></div>
-  <div class="coach" id="coach" hidden><div class="ctx" id="coachTxt"></div><button type="button" id="coachOk">GOT IT</button></div>
+  <div class="coach" id="coach" hidden><div class="ctx" id="coachTxt"></div><div class="cbtns"><button type="button" id="coachOk">GOT IT</button><button type="button" id="coachOff" class="skip">GOT IT<small>FOR GOOD</small></button></div></div>
   <div class="call idle" id="call" aria-live="polite">
     <div class="chip" id="bNum">—</div>
     <div class="btxt"><div class="ctitle" id="bTitle">KICKOFF</div><div class="csub" id="bSub"></div></div>
@@ -884,8 +888,10 @@ const TIPS=[
  ['pat',()=>S.phase==='pat','YOU SCORED! Kick the extra point (+1, easy) or go for 2 (+2, risky).'],
  ['kick',()=>S.phase==='kickoff','KICKOFF: kick it deep, or try an onside kick to get the ball right back.']];
 function coachCheck(){ SAVE.tut=SAVE.tut||{}; const el=$('coach'); if(!el.hidden||S.over) return;
+  if(SAVE.tut.off) return;
   const t=TIPS.find(([k,f])=>!SAVE.tut[k]&&f()); if(t){ el.dataset.k=t[0]; $('coachTxt').textContent=t[2]; el.hidden=false; } }
 $('coachOk').onclick=()=>{ SAVE.tut[$('coach').dataset.k]=1; persist(); $('coach').hidden=true; coachCheck(); };
+$('coachOff').onclick=()=>{ SAVE.tut.off=1; persist(); $('coach').hidden=true; };
 
 /* ---------- Sound (synthesized, no files) ---------- */
 const SND={ctx:null,master:null,noise:null,crowd:null};
