@@ -428,6 +428,43 @@ button.link{background:none;border:none;box-shadow:none;padding:0;font-family:va
 .final .fs{display:flex;justify-content:center;align-items:baseline;gap:16px;font-family:var(--display);font-weight:800;font-style:italic;font-size:56px;line-height:1}
 .final .res{font-family:var(--display);font-weight:800;font-style:italic;font-size:30px;color:var(--gold)}
 @media (prefers-reduced-motion: reduce){button:active{transform:none}}
+/* Naming screen: "Now Entering" reveal */
+#nameScreen .hero3d{height:58px;background:none;border:0;box-shadow:none;overflow:visible;margin-bottom:-4px}
+#nameScreen .hero3d>*:not(.wmk){display:none}
+#nameScreen .hero3d .wmk{position:absolute;left:0;right:0;top:0;width:auto;transform:none;animation:none;display:flex;justify-content:center}
+#nameScreen .hero3d .wmk svg{height:58px;width:auto}
+.nmf{display:flex;flex-direction:column;gap:4px}
+.nmstage{perspective:900px;padding:4px 10px 10px}
+.nmhero{--tc:#0f6b3a;--tt:#ffd23f;position:relative;text-align:center;padding:10px 0 0;border-radius:18px;overflow:hidden;border:6px solid var(--tt);transform:rotateY(-9deg) rotateZ(1.5deg);
+  background:radial-gradient(90% 60% at 50% 35%,var(--tc) 0%,rgba(6,10,22,.25) 80%),repeating-linear-gradient(100deg,transparent 0 40px,rgba(255,255,255,.04) 40px 42px),#070c1c;
+  box-shadow:0 26px 50px rgba(0,0,0,.7),inset 0 0 0 2px rgba(255,255,255,.25)}
+.nmcorn{display:flex;justify-content:space-between;padding:0 12px;font-size:10px;font-weight:800;letter-spacing:.22em;color:var(--tt)}
+.nmplate{margin-top:6px;padding:8px 10px 12px;background:rgba(0,0,0,.55);border-top:1px solid rgba(255,255,255,.12)}
+.nmsub{font-size:9px;font-weight:700;letter-spacing:.24em;color:var(--tt);margin-top:4px}
+.nmfoil{position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,transparent 28%,rgba(255,255,255,.22) 44%,rgba(120,220,255,.16) 51%,transparent 64%);background-size:250% 100%;animation:foil 4s ease-in-out infinite}
+@keyframes foil{0%,100%{background-position:100% 0}50%{background-position:0 0}}
+@media (prefers-reduced-motion: reduce){.nmfoil{animation:none}}
+.nmtag{font-size:10px;font-weight:700;letter-spacing:.3em;color:var(--gold)}
+.nmhero .pl{width:160px;height:160px;margin:2px auto 0;filter:drop-shadow(0 12px 20px rgba(0,0,0,.6))}
+.nmhero .pl svg{width:100%;height:100%}
+.nmhero .ps{font-weight:800;font-size:14px;letter-spacing:.35em;color:#cfd6e6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nmhero .pn{font-family:var(--display);font-weight:900;font-style:italic;font-size:54px;line-height:.95;text-transform:uppercase;color:#fff;text-shadow:0 4px 0 color-mix(in srgb,var(--tt) 70%,#000);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
+.nmspecs{--tc:#0f6b3a;--tt:#ffd23f;position:relative;display:flex;flex-direction:column;gap:3px;padding:0 12px 12px;border-radius:14px;border:3px solid var(--tt);
+  background:linear-gradient(180deg,color-mix(in srgb,var(--tc) 22%,#0a1022),#070c1c);box-shadow:0 14px 28px rgba(0,0,0,.5),inset 0 0 0 1px rgba(255,255,255,.12);overflow:hidden}
+.nmsh{display:flex;justify-content:space-between;margin:0 -12px 4px;padding:6px 12px;background:var(--tt);color:#0b0f1a;font-size:11px;font-weight:900;letter-spacing:.2em}
+.nmspecs .fl{color:var(--tt);font-size:10px;font-weight:800;letter-spacing:.2em;margin-top:5px}
+.nmspecs .fi{background:transparent!important;box-shadow:none!important;border:0;border-bottom:2px dashed rgba(255,255,255,.25);border-radius:0;padding:4px 2px 6px}
+.nmspecs .fi:focus{outline:none;border-bottom-color:var(--tt)}
+.nmspecs .pi{background:rgba(0,0,0,.35)}
+.nmrow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.nmrow>div{min-width:0;display:flex;flex-direction:column;gap:4px}
+.nmf .fi{font-size:20px;padding:9px 12px}
+.nmf .picker{display:flex;overflow-x:auto;gap:8px;padding:2px 0 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.nmf .picker::-webkit-scrollbar{display:none}
+.nmf .picker .pi{flex:none;width:64px;height:64px;padding:5px}
+.nmf .swatches{display:grid;grid-template-columns:repeat(11,1fr);gap:5px}
+.nmf .swatches .sw{width:100%;height:auto;aspect-ratio:1;border-width:2px}
+.nmf .snap{margin-top:8px}
 </style>
 
 <div class="wrap">
@@ -574,14 +611,14 @@ button.link{background:none;border:none;box-shadow:none;padding:0;font-family:va
   <g fill="none" stroke="#fff6cc" stroke-opacity=".7" stroke-width="1" transform="translate(-.6 -.8)"><path vector-effect="non-scaling-stroke" transform="translate(0.0 0) scale(6.2)" d="M2 0H9V3H3V11H6V8H4.5V6H9V12L7 14H2L0 12V2Z"/><path vector-effect="non-scaling-stroke" transform="translate(65.72 0) scale(6.2)" d="M0 0H3V11H6V0H9V12L7 14H2L0 12Z"/><path vector-effect="non-scaling-stroke" transform="translate(131.44 0) scale(6.2)" d="M2 0H9V3H3V5.5H7.5V8.5H3V11H9V14H2L0 12V2Z"/><path vector-effect="non-scaling-stroke" transform="translate(197.16 0) scale(6.2)" d="M2 0H9V3H3V5.5H7L9 7.5V12L7 14H0V11H6V8.5H2L0 6.5V2Z"/><path vector-effect="non-scaling-stroke" transform="translate(262.88 0) scale(6.2)" d="M2 0H9V3H3V5.5H7L9 7.5V12L7 14H0V11H6V8.5H2L0 6.5V2Z"/></g></g></svg></div>
     <div class="tagline">Every franchise starts with a name.</div>
   </div>
-  <form class="card3d" id="nameForm" autocomplete="off">
-    <div class="ck">Name your team</div>
-    <label class="fl" for="tCity">City</label><input class="fi" id="tCity" maxlength="16" placeholder="Dalton">
-    <label class="fl" for="tNick">Nickname</label><input class="fi" id="tNick" maxlength="12" placeholder="Embers">
+  <form class="nmf" id="nameForm" autocomplete="off">
+    <div class="nmstage"><div class="nmhero" id="nmHero"><div class="nmcorn"><span>ROOKIE</span><span>EST. 2026</span></div><i class="pl" id="tLogo"></i><div class="nmplate"><div class="ps" id="tPrevS">CITY</div><div class="pn" id="tPrev">NICKNAME</div><div class="nmsub">EXPANSION FRANCHISE · #1 PICK</div></div><i class="nmfoil"></i></div></div>
+    <div class="nmspecs" id="nmSpecs"><div class="nmsh"><span>FRANCHISE SPECS</span><span>NO. 001</span></div>
+    <div class="nmrow"><div><label class="fl" for="tCity">City</label><input class="fi" id="tCity" maxlength="16" placeholder="Dalton"></div><div><label class="fl" for="tNick">Nickname</label><input class="fi" id="tNick" maxlength="12" placeholder="Embers"></div></div>
     <label class="fl">Logo</label><div class="picker" id="pIcons"></div>
-    <label class="fl">Main color</label><div class="swatches" id="pColors"></div>
+    <label class="fl">Team color</label><div class="swatches" id="pColors"></div>
     <label class="fl">Trim</label><div class="swatches" id="pTrims"></div>
-    <div class="prev"><i class="pl" id="tLogo"></i><div style="min-width:0"><div class="ps" id="tPrevS">NICK</div><div class="pn" id="tPrev">CITY NICKNAME</div></div></div>
+    </div>
     <button class="snap" id="bName" type="submit" disabled>LOCK IT IN</button>
   </form>
 </div>
@@ -1618,8 +1655,8 @@ function drawPickers(){
 function nameInputs(skipPickers){ const c=$('tCity').value.trim(), n=$('tNick').value.trim();
   if(skipPickers!==true) drawPickers();
   $('tLogo').innerHTML=userLogo(pick.style,pickTeam(),USER_COLORS[pick.color],USER_TRIMS[pick.trim]);
-  $('tLogo').parentNode.style.background='linear-gradient(135deg,'+USER_COLORS[pick.color]+',#070c1c)';
-  $('tPrev').textContent=(c||'CITY')+' '+(n||'NICKNAME'); $('tPrevS').textContent=(n||'NICK').toUpperCase(); $('bName').disabled=!(c&&n); return [c,n]; }
+  ['nmHero','nmSpecs'].forEach(k=>{ $(k).style.setProperty('--tc',USER_COLORS[pick.color]); $(k).style.setProperty('--tt',USER_TRIMS[pick.trim]); });
+  $('tPrev').textContent=(n||'Nickname'); $('tPrev').style.fontSize=(n||'Nickname').length>8?Math.max(30,Math.round(54*8/(n||'Nickname').length))+'px':''; $('tPrevS').textContent=(c||'City').toUpperCase(); $('bName').disabled=!(c&&n); return [c,n]; }
 $('tCity').oninput=$('tNick').oninput=nameInputs;
 $('nameForm').onsubmit=e=>{ e.preventDefault(); const [c,n]=nameInputs(); if(!c||!n) return;
   SAVE.team={city:c,nick:n,style:pick.style,color:pick.color,trim:pick.trim}; for(const k in _imgs) if(k[0]==='u') delete _imgs[k]; const t=SE().teams[0]; t.name=myName(); t.short=ME(); persist(); naming=false; showTab('play'); };
