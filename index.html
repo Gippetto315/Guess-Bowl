@@ -720,6 +720,8 @@ function scoutPick(c){ const w=[]; let t=0; for(let n=1;n<=MAX;n++){ const d=Mat
   let r=rf()*t; for(let n=1;n<=MAX;n++){ r-=w[n-1]; if(r<=0) return n; } return MAX; }
 function newSeries(){ const side=S.poss==='you'?'off':'def', c=scoutC(side);
   S.ser={secret:c==null?ri(1,MAX):scoutPick(c),lo:1,hi:MAX,wrong:[]};
+  // Hidden trap: one number per drive is a turnover. Always 6+ away from the real number, and only live while 10+ numbers remain.
+  { const cand=[]; for(let n=1;n<=MAX;n++) if(Math.abs(n-S.ser.secret)>=6) cand.push(n); S.ser.trap=cand[ri(0,cand.length-1)]; }
   if(c!=null){ S.ser.sc=c; if(S.pf) S.pf.push(['SCOUTED!','They won\'t put it near '+c,'cpu']); }
   // Team upgrades: QB (your offense) or film study (your defense) rule out 2 numbers per level at the start of each set of downs.
   const k=2*upgLvl(S.poss==='you'?'qb':'def'), r=S.ser;
@@ -809,6 +811,7 @@ function tap(n){
   const from=S.y, notes=[], r=S.ser, d=Math.abs(n-r.secret), wasDown=S.down;
   let num, title;
   // Exact hit on offense or defense: a "Perfect!" stamp goes first. Back-to-back exact hits stack up.
+  if((S.mode==='off'||S.mode==='def')&&S.down<4&&!go4()&&d!==0&&trapLive()&&n===r.trap) return trapHit(from,notes);
   if(S.mode==='off'||S.mode==='def'){ S.pstk=d===0?(S.pstk||0)+1:0;
     if(d===0){ const W=['PERFECT!','NAILED IT!','BULLSEYE!','MIND READER!'];
       S.pf.unshift(S.pstk>=2?[S.pstk===2?'DOUBLE PERFECT!':S.pstk===3?'TRIPLE PERFECT!':'PERFECT ×'+S.pstk,'Exactly '+r.secret+' · '+S.pstk+' in a row','perf']:[W[ri(0,3)],'Exactly '+r.secret,'perf']); } }
@@ -889,6 +892,17 @@ function narrow(n){ const r=S.ser; r.wrong.push(n);
 // Edges pay more: middle (13) = +8, edges (1 or 25) = +39.
 function yds(n){ return Math.round(8+Math.abs(n-13)*2.6); }
 // 4th-down try tiles: what you need plus a bonus (+2 middle to +15 edges).
+const trapLive=()=>{ const r=S.ser; return r&&r.trap&&r.hi-r.lo+1>=10&&r.trap>=r.lo&&r.trap<=r.hi&&Math.abs(r.trap-r.secret)>=6; };
+function trapHit(from,notes){ const r=S.ser, fum=rf()<.5; let title; S.pstk=0;
+  if(S.mode==='off'){ S.st.give=(S.st.give||0)+1; title=fum?'FUMBLE!':'INTERCEPTED!';
+    S.pf.push([title,fum?'You coughed it up':'Picked off','cpu']);
+    notes.push((fum?'Fumble! They recover.':'Picked off!')+' That was the trap number. Theirs was '+r.secret+'.');
+    cpuBall(fum?S.y:Math.max(1,S.y-ri(0,15))); }
+  else { S.st.take++; title=fum?'FORCED FUMBLE!':'PICKED OFF!';
+    S.pf.push([fum?'FORCED FUMBLE!':'INTERCEPTION!',fum?'You punched it out':'You jumped the route','gold']);
+    notes.push((fum?'Forced fumble! Your ball.':'Picked off! Your ball.')+' You found their trap number.');
+    youBall(fum?S.y:Math.min(99,S.y+ri(0,15))); }
+  tick(notes); prompt(notes); setBanner('💥',title,notes.join(' ')); animate(from,S.y); render(); }
 const stopR=()=>S.togo<=1?1:S.togo<=2?2:3;
 const go4=()=>S.mode==='off'&&S.down===4&&S.goFor&&S.phase==='guess';
 function tileY(n){ return go4() ? S.togo+Math.round(2+Math.abs(n-13)/12*13) : yds(n); }
@@ -990,6 +1004,7 @@ function kickReturn(n){
 const TIPS=[
  ['ret',()=>S.phase==='guess'&&S.mode==='ret','KICK RETURN: tap one number. Hit it exactly and you take it to the house. Close gets you great field position.'],
  ['off',()=>S.phase==='guess'&&S.mode==='off'&&!S.ser.wrong.length,'YOUR OFFENSE: tap a number to call the play. Hit it exactly and you gain the gold yards on that tile. The edges pay the most.'],
+ ['trap',()=>S.phase==='guess'&&S.mode==='off'&&!S.ser.wrong.length&&SAVE.tut.off,'WATCH OUT: every drive, one number is a hidden turnover (fumble or pick). It\'s never close to the real number, and it disappears once fewer than 10 numbers are left.'],
  ['miss',()=>S.phase==='guess'&&S.mode==='off'&&S.ser.wrong.length>0,'MISSED? The banner says HIGHER or LOWER than your guess. Faded numbers are ruled out. Every guess uses a down.'],
  ['def',()=>S.phase==='guess'&&S.mode==='def','DEFENSE: find their number to stop them. Hit it early for an interception. Their edge numbers are deep shots.'],
  ['scout',()=>S.phase==='guess'&&S.ser&&S.ser.sc!=null&&(S.mode==='off'||S.mode==='def'),()=>'SCOUTED: you keep opening near '+S.ser.sc+', so they won\'t put their number near '+S.ser.sc+'. Open somewhere new and they lose the read.'],
