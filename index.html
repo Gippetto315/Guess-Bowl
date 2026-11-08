@@ -477,13 +477,36 @@ button.link{background:none;border:none;box-shadow:none;padding:0;font-family:va
 .nmf .swatches{display:grid;grid-template-columns:repeat(11,1fr);gap:5px}
 .nmf .swatches .sw{width:100%;height:auto;aspect-ratio:1;border-width:2px}
 .nmf .snap{margin-top:8px}
+/* How to play */
+.rulesbtn{margin-left:auto;flex:none;font-size:12px;font-weight:800;letter-spacing:.1em;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);box-shadow:none;color:var(--fg)}
+.howto{position:fixed;inset:0;z-index:50;background:rgba(3,6,14,.82);backdrop-filter:blur(6px);display:grid;place-items:center;padding:16px}
+.hcard{width:calc(100vw - 32px);max-width:400px;box-sizing:border-box;border-radius:24px;padding:16px 18px 18px;background:linear-gradient(180deg,#14204a,#0a1024);border:2px solid var(--gold);box-shadow:0 30px 60px rgba(0,0,0,.6);text-align:center}
+.htop{display:flex;justify-content:space-between;align-items:center;min-height:30px}
+.hstep{font-size:11px;font-weight:800;letter-spacing:.2em;color:var(--gold)}
+.hx{width:32px;height:32px;padding:0;border-radius:50%;font-size:14px;background:rgba(255,255,255,.08);box-shadow:none;border:0}
+.hart{display:flex;justify-content:center;flex-wrap:wrap;gap:6px;min-height:84px;align-items:center;margin:6px 0 10px}
+.mt{width:52px;height:56px;border-radius:12px;background:#1a2550;border:2px solid #2d3d7a;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--display);font-weight:800;font-style:italic;font-size:24px;line-height:1}
+.mt small{font-size:12px;color:var(--gold);font-style:normal;margin-top:3px}
+.mt.g{background:#3a2f08;border-color:var(--gold);color:var(--gold);box-shadow:0 0 18px rgba(255,210,63,.4)}
+.mt.d{opacity:.25}.mt.r{background:#3a0d0d;border-color:#e8483d}
+.hpill{font-family:var(--display);font-weight:800;font-style:italic;font-size:20px;padding:8px 14px;border-radius:12px;background:#0d1530;border:2px solid #2d3d7a}
+.hpill.g{border-color:var(--gold);color:var(--gold)}.hpill.r{border-color:#e8483d;color:#ff8a7f}
+.hcard h2{margin:0 0 8px;font-family:var(--display);font-weight:900;font-style:italic;font-size:30px;line-height:1;color:#fff;text-transform:uppercase}
+.hbody{font-size:15px;line-height:1.45;color:#cfd6e6;text-align:left;min-height:120px}
+.hbody b{color:#fff}
+.hdots{display:flex;justify-content:center;gap:6px;margin:12px 0}
+.hdots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.2)}.hdots i.on{background:var(--gold);width:22px;border-radius:4px}
+.hnav{display:grid;grid-template-columns:1fr 2fr;gap:10px}
+.hnav button{padding:13px;font-size:18px}
+.hnav #hBack{background:transparent;box-shadow:none;border:1px solid rgba(255,255,255,.25)}
+.hnav #hBack:disabled{opacity:.3}
 </style>
 
 <div class="wrap">
 <div class="screen" id="gameScreen" hidden>
   <div class="score">
     <div class="side you"><i class="sl" id="lMe"></i><b id="sYou">0</b><span id="sMe">YOU</span></div>
-    <div class="clock"><strong id="sQ">Q1</strong><span id="sLeft">10 plays</span><span class="wxtag" id="wxTag"></span><div class="btns"><button class="menu" id="bMenu" type="button">Menu</button><button class="menu" id="bSound" type="button">Sound</button></div></div>
+    <div class="clock"><strong id="sQ">Q1</strong><span id="sLeft">10 plays</span><span class="wxtag" id="wxTag"></span><div class="btns"><button class="menu" id="bMenu" type="button">Menu</button><button class="menu" id="bRules2" type="button">Rules</button><button class="menu" id="bSound" type="button">Sound</button></div></div>
     <div class="side cpu"><span id="sOpp">CPU</span><b id="sCpu">0</b><i class="sl" id="lOpp"></i></div>
   </div>
 
@@ -635,10 +658,18 @@ button.link{background:none;border:none;box-shadow:none;padding:0;font-family:va
   </form>
 </div>
 
+<div class="howto" id="howto" hidden><div class="hcard" role="dialog" aria-modal="true" aria-labelledby="hTitle">
+  <div class="htop"><span class="hstep" id="hStep"></span><button class="hx" id="hClose" type="button" aria-label="Close">✕</button></div>
+  <div class="hart" id="hArt"></div><h2 id="hTitle"></h2><div class="hbody" id="hBody"></div>
+  <div class="hdots" id="hDots"></div>
+  <div class="hnav"><button type="button" id="hBack">BACK</button><button type="button" class="snap" id="hNext">NEXT</button></div>
+</div></div>
+
 <div class="screen scroll" id="menuScreen">
   <header class="dh">
     <button class="dteam" id="bRename" type="button" aria-label="Rename your team"><span class="dlogo" id="tsLogo"></span><span class="dname"><b id="myTeam"></b><small id="tsRec"></small></span></button>
     <span class="coinchip" id="coinChip" hidden></span>
+    <button class="rulesbtn" id="bRules" type="button">RULES</button>
   </header>
 
   <div class="resume2" id="resumeCard" hidden>
@@ -765,7 +796,25 @@ const tolTxt=t=>t>0?'within ±'+t:'dead on';
 const ORD=['1st','2nd','3rd','4th'];
 function ddText(){ const goal=S.poss==='you'?S.y+S.togo>=100:S.y-S.togo<=0; return ORD[S.down-1]+' & '+(goal?'Goal':S.togo); }
 
+// How to play: forced walkthrough the first time you kick off, then any time from the Rules buttons.
+const T_=(n,y,c)=>'<span class="mt'+(c?' '+c:'')+'">'+n+(y?'<small>'+y+'</small>':'')+'</span>';
+const RULES=[
+ ['EVERY PLAY IS A GUESS', T_(11)+T_(12)+T_('?','','g')+T_(14)+T_(15), 'The defense hides a number from <b>1 to 25</b>. Tap a number to call your play. <b>Four quarters, 32 plays.</b> Outscore them.'],
+ ['HIT IT, MOVE THE CHAINS', T_(1,'+39')+T_(7,'+23')+T_(13,'+8')+T_(19,'+23','g')+T_(25,'+39'), 'Hit their number exactly and you <b>gain the yards on that tile</b> plus a <b>first down</b>. The edges pay the most, the middle the least.'],
+ ['MISS? READ THE HINT', '<span class="hpill">8 ▲</span><span class="hpill g">HIGHER THAN 8</span>', 'The banner says <b>HIGHER</b> or <b>LOWER</b>, and ruled-out numbers fade. Each guess uses a down. <b>Close misses still gain yards</b>, but less as the numbers run out. Way off <b>loses</b> yards.'],
+ ['WATCH FOR THE TRAP', T_(4)+T_('💥','','r')+T_(6), 'Early in every drive, one hidden number is a <b>fumble or interception</b>. It\'s never close to the real number, and it disappears once <b>fewer than 10</b> numbers are left.'],
+ ['4TH DOWN: YOUR CALL', '<span class="hpill">PUNT</span><span class="hpill">FIELD GOAL</span><span class="hpill g">GO FOR IT</span>', 'Punt it away, kick it, or go for it. Going for it reloads the D to <b>9 numbers</b>: hit = first down, <b>1 away +3, 2 away +2, 3 away +1</b>. Anything else, turnover.'],
+ ['ON DEFENSE, YOU GUESS', '<span class="hpill g">EXACT = PICK</span><span class="hpill">CLOSE = SMALL GAIN</span><span class="hpill r">WAY OFF = BIG PLAY</span>', 'Now you guess <b>their</b> number. Exact is an <b>interception</b> (a sack on 3rd). One away is a <b>tackle for loss</b>. The farther off, the more they gain, and <b>20+ off is a touchdown</b>.'],
+ ['THEY\'RE WATCHING', '<span class="hpill r">SCOUTED!</span><span class="hpill g">PERFECT!</span>', 'Open near the same number every drive and they\'ll <b>scout you</b> and hide it elsewhere. Mix it up. Nail it exactly for a <b>PERFECT!</b> Now go win.']];
+let hI=0, hDone=null, hForced=false;
+function showRules(forced,done){ hI=0; hForced=!!forced; hDone=done||null; $('howto').hidden=false; drawRules(); }
+function drawRules(){ const r=RULES[hI], last=hI===RULES.length-1;
+  $('hStep').textContent=(hForced?'HOW TO PLAY · ':'RULES · ')+(hI+1)+' OF '+RULES.length; $('hTitle').textContent=r[0]; $('hArt').innerHTML=r[1]; $('hBody').innerHTML=r[2];
+  $('hDots').innerHTML=RULES.map((_,k)=>'<i'+(k===hI?' class="on"':'')+'></i>').join('');
+  $('hBack').disabled=hI===0; $('hNext').textContent=last?(hForced?"LET'S PLAY":'GOT IT'):'NEXT'; $('hClose').hidden=hForced; }
+function closeRules(){ $('howto').hidden=true; if(hForced){ SAVE.rulesSeen=1; persist(); } const d=hDone; hDone=null; if(d) d(); }
 function newGame(kind,oppIdx){
+  if(SAVE.team&&!SAVE.rulesSeen){ return showRules(true,()=>newGame(kind,oppIdx)); }
   if(S&&S.paused&&!S.over){ /* abandoning a paused game */ }
   if(!SAVE.team) return showTab('play');
   lastSeen=null;
@@ -1701,6 +1750,10 @@ const commit=m=>{ SE().mode=m; SE().upg={coins:0,qb:0,line:0,kick:0,def:0}; pers
 $('mPure').onclick=()=>commit('pure');
 $('mUpg').onclick=()=>commit('upg');
 $('bResume').onclick=()=>{ S.paused=false; showTab('play'); render(); };
+$('hNext').onclick=()=>{ if(hI<RULES.length-1){ hI++; drawRules(); } else closeRules(); };
+$('hBack').onclick=()=>{ if(hI>0){ hI--; drawRules(); } };
+$('hClose').onclick=()=>{ $('howto').hidden=true; hDone=null; };
+$('bRules').onclick=$('bRules2').onclick=()=>showRules(false);
 $('bSound').onclick=()=>{ SAVE.sound=!soundOn(); persist(); $('bSound').textContent=soundOn()?'Sound':'Muted'; crowdAmb(soundOn()); if(soundOn()) sfx.chime(); };
 $('bMenu').onclick=()=>{ crowdAmb(false); S.paused=true; TAB='play'; $('gameScreen').hidden=true; $('menuScreen').hidden=false; document.querySelector('.tabs').hidden=false; renderMenu(); };
 let pick={style:'eagle',color:2,trim:0}; // new teams start on green
