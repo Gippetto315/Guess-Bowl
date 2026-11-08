@@ -394,6 +394,7 @@ button.link{background:none;border:none;box-shadow:none;padding:0;font-family:va
 .gkey b{color:var(--fg);font-weight:600}
 .gkey i{font-style:normal;color:var(--line);padding:0 2px}
 .panel.fg .grid button small{display:none}
+.back4{display:block;width:100%;margin-top:10px;padding:10px;font-size:14px;background:transparent;color:var(--fg);border:1px solid rgba(255,255,255,.3);box-shadow:none;border-radius:12px}
 .ghead{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .glabel{font-family:var(--display);font-weight:800;font-style:italic;font-size:19px;letter-spacing:.03em;color:var(--acc)}
 .gleft{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.06em;text-transform:uppercase}
@@ -481,6 +482,7 @@ button.link{background:none;border:none;box-shadow:none;padding:0;font-family:va
     <div class="gkey" id="gKey"></div>
     <div class="track" id="track"><div class="fill" id="fill"></div></div>
     <div class="grid" id="grid"></div>
+    <button type="button" class="back4" id="bBack4" hidden>← CHANGE THE CALL · punt or kick instead</button>
   </div>
 
   <div class="final" id="overBox" hidden>
@@ -798,12 +800,13 @@ function tap(n){
       // A near miss still gets a hand on them: one away = +1, within 3 = +2.
       // Defense mirrors offense: the closer your read, the less they get. One away stuffs them; way off (15+) gets you burned.
       if(d>=20){ const up=n<r.secret; num=n+(up?'▲':'▼'); title='BUSTED COVERAGE!'; S.pf.push(['BUSTED COVERAGE',S.opp+' take it the distance','cpu']); notes.push('Way off. Nobody home. Touchdown from '+(S.y)+' out.'); cpuTD(notes); tick(notes); prompt(notes); setBanner(num,title,notes.join(' ')); animate(from,S.y); render(); return; }
-      const deep=d>=15, gain= d<=1?0 : d<=4?snowy(ri(3,5)) : d<=14?snowy(ri(7,10)) : d<=19?snowy(ri(11,15)) : snowy(ri(16,26));
+      const deep=d>=15, gain= d<=1?-ri(1,3) : d<=4?snowy(ri(3,5)) : d<=14?snowy(ri(7,10)) : d<=19?snowy(ri(11,15)) : snowy(ri(16,26));
       const up=n<r.secret; narrow(n); num=n+(up?'▲':'▼'); title=(up?'HIGHER':'LOWER')+' THAN '+n;
-      if(deep) S.pf.push(['BIG PLAY',S.opp+' +'+gain+' yards','cpu']); else if(d<=1) S.pf.push(['STUFFED!','No gain','gold']);
-      notes.push(d<=1?'One away. Stuffed at the line, no gain.':deep?'Way off. Big play, they gain '+gain+'.':'They gain '+gain+'. They shift.');
+      if(deep) S.pf.push(['BIG PLAY',S.opp+' +'+gain+' yards','cpu']); else if(d<=1) S.pf.push(['TACKLE FOR LOSS',S.opp+' lose '+(-gain),'gold']);
+      notes.push(d<=1?'One away. Tackle for loss, they lose '+(-gain)+'.':deep?'Way off. Big play, they gain '+gain+'.':'They gain '+gain+'. They shift.');
       const ny=S.y-gain;
-      if(ny<=0){ cpuTD(notes); }
+      if(ny>=100){ S.you+=2; S.tagYou='safety'; notes.push('Dropped in their end zone. SAFETY! +2'); setKick('cpu'); }
+      else if(ny<=0){ cpuTD(notes); }
       else if(gain>=S.togo){ cpuBall(ny); notes.push('Their first down. New number.'); }
       else { S.y=ny; S.down++; S.togo-=gain;
         if(S.down>4){ notes.push('Turnover on downs!'); youBall(ny); } }
@@ -1016,6 +1019,7 @@ function render(){
       blk:  ['BLOCK THE KICK', 'One guess', '<b>Exact</b> = BLOCKED <i>·</i> <b>Miss</b> = they almost always make it'],
       stop2:['STOP THE 2', 'Within ±6', '<b>Within 6</b> = stopped <i>·</i> <b>Miss</b> = they get 2'],
       onside:['ONSIDE KICK', 'Within ±2', '<b>Within 2</b> = you recover <i>·</i> <b>Miss</b> = their ball near midfield']};
+    if(SP[S.mode]) $('bBack4').hidden=true;
     if(SP[S.mode]){
       panel.className='panel fg'; buildGrid(MAX);
       $('gLabel').textContent=SP[S.mode][0];
@@ -1032,6 +1036,7 @@ function render(){
         ? '<b>Hit it</b> = '+(S.down<=2?'INTERCEPTION':S.down===3?'SACK (−7)':'STOP')+' <i>·</i> <b>One away</b> = no gain <i>·</i> <b>Within 4</b> = +3–5 <i>·</i> <b>Miss</b> = +7–10 <i>·</i> <b>15+ off</b> = big play <i>·</i> <b>20+ off</b> = TD'
         : go4() ? '<b>Hit it</b> = first down + tile yards <i>·</i> <b>1 away</b> = +3 <i>·</i> <b>2 away</b> = +2 <i>·</i> <b>3 away</b> = +1 <i>·</i> <b>Else</b> = turnover'
         : '<b>Hit it</b> = yards on the tile <i>·</i> <b>Within 2</b> = +4 <i>·</i> <b>Within 5</b> = +2 <i>·</i> <b>15+ off</b> = loss';
+      $('bBack4').hidden=!go4();
       for(let i=1;i<=MAX;i++){ const s=$('n'+i).querySelector('small'); if(s) s.textContent='+'+tileY(i); }
       fill.style.left=((r.lo-1)/MAX*100)+'%'; fill.style.width=(left/MAX*100)+'%';
       r.wrong.forEach(n=>{ const t=document.createElement('i'); t.className='tick'; t.style.left=((n-.5)/MAX*100)+'%'; tr.appendChild(t); });
@@ -1055,6 +1060,7 @@ $('bGo').onclick=()=>{ S.goFor=true; const r=S.ser;
   r.secret=ri(r.lo,r.hi); r.wrong=[]; r.lastDir=null; S.pf.push(['THE D SELLS OUT','4th & '+S.togo+' · '+(r.hi-r.lo+1)+' numbers in play','cpu']);
   S.phase='guess'; setBanner(null,'GOING FOR IT','The defense reloads. The number is somewhere in '+r.lo+'–'+r.hi+'.'); render(); };
 $('bPunt').onclick=userPunt;
+$('bBack4').onclick=()=>{ S.goFor=false; S.phase='fourth'; setBanner(null,'4TH & '+S.togo,'Changed your mind? Punt it, kick it, or go for it.'); render(); };
 const pickHidden=()=>{ S.fg=ri(1,MAX); do{ S.block=ri(1,MAX); }while(S.block===S.fg); };
 $('bXP').onclick=()=>{ S.mode='xp'; pickHidden(); S.phase='guess'; setBanner(null,'EXTRA POINT','Land within ±11 of the number. Dodge the block.'); render(); };
 $('bTwo').onclick=()=>{ S.mode='two'; pickHidden(); S.phase='guess'; setBanner(null,'GO FOR 2','One snap from the 2. Land within ±5.'); render(); };
@@ -1655,7 +1661,7 @@ function flashCheck(){
   if(!L) return flash('KICKOFF','You receive','gold');
   const dy=cur.you-L.you, dc=cur.cpu-L.cpu;
   const by=()=>bump('sYou','dYou',S.you,dy), bc=()=>bump('sCpu','dCpu',S.cpu,dc);
-  const TAGS={td:'TOUCHDOWN!',ret:'RETURN TD!',fg:'FIELD GOAL',xp:'EXTRA POINT',two:'2-POINT GOOD!'};
+  const TAGS={td:'TOUCHDOWN!',ret:'RETURN TD!',fg:'FIELD GOAL',xp:'EXTRA POINT',two:'2-POINT GOOD!',safety:'SAFETY!'};
   if(dy>0) flash(S.tagYou==='fg'?'IT\'S GOOD!':TAGS[S.tagYou]||'SCORE', S.tagYou==='fg'?S.fgDist+'-YARD FIELD GOAL · +3':ME()+' +'+dy,'gold',by);
   if(dc>0) flash(S.tagCpu==='fg'?'FIELD GOAL':S.tagCpu==='safety'?'SAFETY':'TOUCHDOWN',S.tagCpu==='fg'?S.fgDist+' yards · '+S.opp+' +3':S.opp+' +'+dc,'cpu',bc);
   if(cur.over && !L.over) return flash('FINAL',S.you+' – '+S.cpu,'gold');
