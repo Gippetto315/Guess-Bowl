@@ -690,11 +690,11 @@ function cpuTD(notes){ S.cpu+=6; S.tagCpu='td'; S.tdY=-4; S.tdPoss='cpu';
 function cpuPAT(n){ const notes=[], d=Math.abs(n-S.fg); let title;
   if(S.cpat==='two'){ const stop=d<=6;
     if(stop){ title='STOPPED!'; S.pf.push(['2-POINT STOP','No good','gold']); notes.push('You read it. Two-point try fails.'); }
-    else { S.cpu+=2; title='THEY CONVERT'; notes.push('Missed by '+(d-6)+'. Two-point try is good.'); } }
+    else { S.cpu+=2; S.tagCpu='two'; title='THEY CONVERT'; notes.push('Missed by '+(d-6)+'. Two-point try is good.'); } }
   else { const blocked=d===0, ok=!blocked&&rf()<.97;
     S.kick={type:'fg',from:2,to:blocked?-1:-10,lat:ok||blocked?0:(rf()<.5?-6:6),poss:'cpu'};
     if(blocked){ S.st.take++; title='BLOCKED!'; S.pf.push(['BLOCKED!','You got a hand on it','gold']); notes.push('You timed the snap. Kick blocked!'); }
-    else if(ok){ S.cpu+=1; title='EXTRA POINT GOOD'; notes.push('It was '+S.fg+'. Kick is good.'); }
+    else if(ok){ S.cpu+=1; S.tagCpu='xp'; title='EXTRA POINT GOOD'; notes.push('It was '+S.fg+'. Kick is good.'); }
     else { title='NO GOOD!'; notes.push('Doinked it. Extra point misses!'); } }
   S.cpat=null; if(!S.needKick) setKick('cpu'); prompt(notes);
   setBanner(S.fg,title,notes.join(' ')); animate(2,S.y); render(); }
@@ -1638,11 +1638,16 @@ $('segCareer').onclick=()=>{ statView='career'; renderStats(); };
 /* ---------- Pop-ups: offense/defense, downs, scores ---------- */
 let lastSeen=null; const fq=[]; let fBusy=false;
 let flashDelay=350;
-function flash(word,sub,tone,fn){ fq.push([word,sub,tone,fn]); if(!fBusy){ fBusy=true; setTimeout(nextFlash,flashDelay); } flashDelay=350; }
+// New play = fresh banners: anything still waiting from an older play is dropped (scores/halftime/final are kept), and a stale one on screen is cut short.
+let fGen=0, fT=null, fCur=null;
+function flash(word,sub,tone,fn){
+  for(let i=fq.length-1;i>=0;i--) if(fq[i][4]<fGen&&!fq[i][3]) fq.splice(i,1);
+  if(fCur&&fCur[4]<fGen&&!fCur[3]&&fBusy){ clearTimeout(fT); fBusy=false; fCur=null; $('flash').classList.remove('show'); }
+  fq.push([word,sub,tone,fn,fGen]); if(!fBusy){ fBusy=true; fT=setTimeout(nextFlash,flashDelay); } flashDelay=350; }
 function bump(id,key,val,plus){ S[key]=val; const el=$(id); el.textContent=val; el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
   const f=document.createElement('span'); f.className='plus'; f.textContent='+'+plus; el.parentNode.appendChild(f); setTimeout(()=>f.remove(),1400); }
 function nextFlash(){
-  const it=fq.shift(); if(!it){ fBusy=false; return; }
+  const it=fq.shift(); fCur=it||null; if(!it){ fBusy=false; return; }
   const el=$('flash'); $('fw').textContent=it[0]; $('fs2').textContent=it[1];
   const lng=it[0]==='SCOUTED!'; el.className='flash f-'+it[2]+(it[3]?' big':'')+(lng?' long':''); void el.offsetWidth; el.classList.add('show'); if(it[3]) it[3]();
   const w=it[0];
@@ -1654,9 +1659,9 @@ function nextFlash(){
   else if(it[2]==='gold'&&/FIELD GOAL|EXTRA POINT|2-POINT/.test(w)) sfx.cheer(.8);
   else if(/^(SACK!|INTERCEPTION!|STUFFED!)$/.test(w)){ sfx.cheer(1); sfx.whistle(); }
   else if(/SACKED|TACKLE FOR LOSS|BIG PLAY/.test(w)) sfx.groan();
-  setTimeout(nextFlash,it[3]?2550:lng?3000:1900);
+  fT=setTimeout(nextFlash,it[3]?2550:lng?3000:1900);
 }
-function flashCheck(){
+function flashCheck(){ fGen++;
   S.pf.splice(0).forEach(f=>flash(...f));
   const cur={poss:S.poss,down:S.down,ser:S.ser,you:S.you,cpu:S.cpu,over:S.over,kickPend:!!(S.needKick||S.phase==='pat')}, L=lastSeen; lastSeen=cur;
   if(!L) return flash('KICKOFF','You receive','gold');
@@ -1664,7 +1669,7 @@ function flashCheck(){
   const by=()=>bump('sYou','dYou',S.you,dy), bc=()=>bump('sCpu','dCpu',S.cpu,dc);
   const TAGS={td:'TOUCHDOWN!',ret:'RETURN TD!',fg:'FIELD GOAL',xp:'EXTRA POINT',two:'2-POINT GOOD!',safety:'SAFETY!'};
   if(dy>0) flash(S.tagYou==='fg'?'IT\'S GOOD!':TAGS[S.tagYou]||'SCORE', S.tagYou==='fg'?S.fgDist+'-YARD FIELD GOAL · +3':ME()+' +'+dy,'gold',by);
-  if(dc>0) flash(S.tagCpu==='fg'?'FIELD GOAL':S.tagCpu==='safety'?'SAFETY':'TOUCHDOWN',S.tagCpu==='fg'?S.fgDist+' yards · '+S.opp+' +3':S.opp+' +'+dc,'cpu',bc);
+  if(dc>0) flash(S.tagCpu==='fg'?'FIELD GOAL':S.tagCpu==='safety'?'SAFETY':S.tagCpu==='xp'?'EXTRA POINT':S.tagCpu==='two'?'2-POINT GOOD':'TOUCHDOWN',S.tagCpu==='fg'?S.fgDist+' yards · '+S.opp+' +3':S.opp+' +'+dc,'cpu',bc);
   if(cur.over && !L.over) return flash('FINAL',S.you+' – '+S.cpu,'gold');
   if(cur.over) return;
   if(S.phase==='pat'||S.needKick){ if(S.needKick && !L.kickPend) flash('KICKOFF',S.needKick==='you'?'You kick':'You receive','gold'); }
