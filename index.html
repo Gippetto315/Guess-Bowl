@@ -767,6 +767,8 @@ function newGame(kind,oppIdx){
   if(S&&S.paused&&!S.over){ /* abandoning a paused game */ }
   if(!SAVE.team) return showTab('play');
   lastSeen=null;
+  // Wipe anything left over from the last game (FINAL, last score) so the new game starts clean.
+  fq.length=0; clearTimeout(fT); fBusy=false; fCur=null; $('flash').className='flash';
   const O=TM(oppIdx);
   S={kind,oppIdx,oppName:O.name,opp:O.short,wx:pickWx(),st:blankGame(),pf:[],you:0,cpu:0,dYou:0,dCpu:0,q:1,left:PLAYS,over:false,phase:null,mode:null,theme:rf()<.5?'day':'night'};
   setKick('cpu'); animY=65;
