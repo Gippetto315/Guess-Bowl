@@ -53,7 +53,8 @@ button small{display:block;font-family:var(--body);font-weight:400;letter-spacin
 .side.you .plus{left:40px} .side.cpu .plus{right:40px}
 @keyframes rise{0%{opacity:0;transform:translateY(8px)}15%{opacity:1}100%{opacity:0;transform:translateY(-22px)}}
 .flash.big .fw{font-size:60px}
-.flash.big.show{animation-duration:1.8s}
+.flash.big.show{animation-duration:2.55s}
+.flash.long.show{animation-duration:3s}
 .stage{position:relative;flex:1 1 0;min-height:150px}
 .screen{flex:1 1 0;min-height:0;display:flex;flex-direction:column;gap:8px}
 .screen > *:not(.stage){flex:none}
@@ -364,9 +365,9 @@ button.link{background:none;border:none;box-shadow:none;padding:0;font-family:va
 .flash .fw{font-family:var(--display);font-weight:800;font-style:italic;font-size:46px;line-height:1;color:var(--t);letter-spacing:.02em}
 .flash .fs2{font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--fg);margin-top:5px}
 .flash.f-you .fb{--t:var(--you)} .flash.f-cpu .fb{--t:var(--cpu)} .flash.f-gold .fb{--t:var(--gold)}
-.flash.show{animation:flashIn 1.15s ease forwards}
-@keyframes flashIn{0%{opacity:0;transform:scale(.7)}12%{opacity:1;transform:scale(1.06)}20%{transform:scale(1)}78%{opacity:1}100%{opacity:0}}
-@media (prefers-reduced-motion: reduce){.flash.show{animation:flashFade 1.15s linear forwards}@keyframes flashFade{0%,80%{opacity:1}100%{opacity:0}}}
+.flash.show{animation:flashIn 1.9s ease forwards}
+@keyframes flashIn{0%{opacity:0;transform:scale(.7)}12%{opacity:1;transform:scale(1.06)}20%{transform:scale(1)}86%{opacity:1}100%{opacity:0}}
+@media (prefers-reduced-motion: reduce){.flash.show{animation:flashFade 1.9s linear forwards}@keyframes flashFade{0%,80%{opacity:1}100%{opacity:0}}}
 .bug{display:grid;grid-template-columns:auto 1fr auto;align-items:stretch;border-radius:10px;overflow:hidden;background:linear-gradient(180deg,#17213f,#0e1630);border:1px solid var(--line);box-shadow:0 6px 18px rgba(0,0,0,.35)}
 .bug .poss{display:flex;align-items:center;padding:0 22px 0 12px;font-family:var(--display);font-weight:800;font-style:italic;font-size:17px;letter-spacing:.06em;color:#fff;background:var(--you);clip-path:polygon(0 0,100% 0,84% 100%,0 100%)}
 .bug .mid{display:flex;flex-direction:column;justify-content:center;padding:6px;min-width:0}
@@ -671,7 +672,7 @@ function scoutPick(c){ const w=[]; let t=0; for(let n=1;n<=MAX;n++){ const d=Mat
   let r=rf()*t; for(let n=1;n<=MAX;n++){ r-=w[n-1]; if(r<=0) return n; } return MAX; }
 function newSeries(){ const side=S.poss==='you'?'off':'def', c=scoutC(side);
   S.ser={secret:c==null?ri(1,MAX):scoutPick(c),lo:1,hi:MAX,wrong:[]};
-  if(c!=null&&S.pf) S.pf.push(side==='off'?["THEY'VE SCOUTED YOU",'The D knows your opener','cpu']:["THEY'VE SCOUTED YOU",'The O knows your opener','cpu']);
+  if(c!=null){ S.ser.sc=c; if(S.pf) S.pf.push(['SCOUTED!','They won\'t put it near '+c,'cpu']); }
   // Team upgrades: QB (your offense) or film study (your defense) rule out 2 numbers per level at the start of each set of downs.
   const k=2*upgLvl(S.poss==='you'?'qb':'def'), r=S.ser;
   for(let i=0;i<k;i++){ const canLo=r.secret>r.lo, canHi=r.secret<r.hi; if(!canLo&&!canHi) break; if(canLo&&(!canHi||rf()<.5)) r.lo++; else r.hi--; } }
@@ -928,14 +929,15 @@ const TIPS=[
  ['off',()=>S.phase==='guess'&&S.mode==='off'&&!S.ser.wrong.length,'YOUR OFFENSE: tap a number to call the play. Hit it exactly and you gain the gold yards on that tile. The edges pay the most.'],
  ['miss',()=>S.phase==='guess'&&S.mode==='off'&&S.ser.wrong.length>0,'MISSED? The banner says HIGHER or LOWER than your guess. Faded numbers are ruled out. Every guess uses a down.'],
  ['def',()=>S.phase==='guess'&&S.mode==='def','DEFENSE: find their number to stop them. Hit it early for an interception. Their edge numbers are deep shots.'],
+ ['scout',()=>S.phase==='guess'&&S.ser&&S.ser.sc!=null&&(S.mode==='off'||S.mode==='def'),()=>'SCOUTED: you keep opening near '+S.ser.sc+', so they won\'t put their number near '+S.ser.sc+'. Open somewhere new and they lose the read.'],
  ['fourth',()=>S.phase==='fourth','4TH DOWN: go for it, punt it away, or kick a field goal if you are in range.'],
  ['pat',()=>S.phase==='pat','YOU SCORED! Kick the extra point (+1, easy) or go for 2 (+2, risky).'],
  ['kick',()=>S.phase==='kickoff','KICKOFF: kick it deep, or try an onside kick to get the ball right back.']];
 function coachCheck(){ SAVE.tut=SAVE.tut||{}; const el=$('coach'); if(!el.hidden||S.over) return;
-  if(SAVE.tut.off) return;
-  const t=TIPS.find(([k,f])=>!SAVE.tut[k]&&f()); if(t){ el.dataset.k=t[0]; $('coachTxt').textContent=t[2]; el.hidden=false; } }
+  if(SAVE.tut.never) return;
+  const t=TIPS.find(([k,f])=>!SAVE.tut[k]&&f()); if(t){ el.dataset.k=t[0]; $('coachTxt').textContent=typeof t[2]==='function'?t[2]():t[2]; el.hidden=false; } }
 $('coachOk').onclick=()=>{ SAVE.tut[$('coach').dataset.k]=1; persist(); $('coach').hidden=true; coachCheck(); };
-$('coachOff').onclick=()=>{ SAVE.tut.off=1; persist(); $('coach').hidden=true; };
+$('coachOff').onclick=()=>{ SAVE.tut.never=1; persist(); $('coach').hidden=true; };
 
 /* ---------- Sound (synthesized, no files) ---------- */
 const SND={ctx:null,master:null,noise:null,crowd:null};
@@ -1643,7 +1645,7 @@ function bump(id,key,val,plus){ S[key]=val; const el=$(id); el.textContent=val; 
 function nextFlash(){
   const it=fq.shift(); if(!it){ fBusy=false; return; }
   const el=$('flash'); $('fw').textContent=it[0]; $('fs2').textContent=it[1];
-  el.className='flash f-'+it[2]+(it[3]?' big':''); void el.offsetWidth; el.classList.add('show'); if(it[3]) it[3]();
+  const lng=it[0]==='SCOUTED!'; el.className='flash f-'+it[2]+(it[3]?' big':'')+(lng?' long':''); void el.offsetWidth; el.classList.add('show'); if(it[3]) it[3]();
   const w=it[0];
   if(/TOUCHDOWN!|RETURN TD/.test(w)){ sfx.horn(); sfx.roar(); }
   else if(w==='TOUCHDOWN'&&it[2]==='cpu') sfx.groan();
@@ -1653,7 +1655,7 @@ function nextFlash(){
   else if(it[2]==='gold'&&/FIELD GOAL|EXTRA POINT|2-POINT/.test(w)) sfx.cheer(.8);
   else if(/^(SACK!|INTERCEPTION!|STUFFED!)$/.test(w)){ sfx.cheer(1); sfx.whistle(); }
   else if(/SACKED|TACKLE FOR LOSS|BIG PLAY/.test(w)) sfx.groan();
-  setTimeout(nextFlash,it[3]?1800:1150);
+  setTimeout(nextFlash,it[3]?2550:lng?3000:1900);
 }
 function flashCheck(){
   S.pf.splice(0).forEach(f=>flash(...f));
