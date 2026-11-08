@@ -105,7 +105,7 @@ button small{display:block;font-family:var(--body);font-weight:400;letter-spacin
 .prev .ps{font-family:var(--display);font-weight:800;font-style:italic;font-size:15px;background:rgba(0,0,0,.25);padding:4px 8px;border-radius:4px;letter-spacing:.06em}
 .prev .pn{font-family:var(--display);font-weight:800;font-style:italic;font-size:24px;text-transform:uppercase;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 button.link{background:none;border:none;box-shadow:none;padding:0;font-family:var(--body);font-weight:600;font-size:14px;color:var(--gold);letter-spacing:0;text-decoration:underline;text-underline-offset:3px}
-.side span{max-width:72px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side span{flex:none;overflow:hidden;white-space:nowrap}
 .hero3d{position:relative;flex:none;height:250px;border-radius:20px;overflow:hidden;isolation:isolate;perspective:520px;
   background:radial-gradient(130% 90% at 50% -10%,#24482f 0%,#0e1a12 55%,#070d09 100%);
   box-shadow:0 26px 50px rgba(0,0,0,.6),0 2px 0 rgba(255,255,255,.06) inset,0 0 0 1px rgba(255,255,255,.05)}
@@ -663,7 +663,13 @@ const PLAYS=32, MAX=25;
 
 let S, animY=25, moving=false;
 
-function newSeries(){ S.ser={secret:ri(1,MAX),lo:1,hi:MAX,wrong:[]};
+// Scouting: if your last 3 openers on this side sat within 4 of each other, they read the tendency and steer their number away from it.
+function scoutC(side){ const a=((S.scout||{})[side]||[]).slice(-3); if(a.length<3||Math.max(...a)-Math.min(...a)>4) return null; return Math.round((a[0]+a[1]+a[2])/3); }
+function scoutPick(c){ const w=[]; let t=0; for(let n=1;n<=MAX;n++){ const d=Math.abs(n-c), x=d<=3?.4:d<=6?.75:1; w.push(x); t+=x; }
+  let r=rf()*t; for(let n=1;n<=MAX;n++){ r-=w[n-1]; if(r<=0) return n; } return MAX; }
+function newSeries(){ const side=S.poss==='you'?'off':'def', c=scoutC(side);
+  S.ser={secret:c==null?ri(1,MAX):scoutPick(c),lo:1,hi:MAX,wrong:[]};
+  if(c!=null&&S.pf) S.pf.push(side==='off'?["THEY'VE SCOUTED YOU",'The D knows your opener','cpu']:["THEY'VE SCOUTED YOU",'The O knows your opener','cpu']);
   // Team upgrades: QB (your offense) or film study (your defense) rule out 2 numbers per level at the start of each set of downs.
   const k=2*upgLvl(S.poss==='you'?'qb':'def'), r=S.ser;
   for(let i=0;i<k;i++){ const canLo=r.secret>r.lo, canHi=r.secret<r.hi; if(!canLo&&!canHi) break; if(canLo&&(!canHi||rf()<.5)) r.lo++; else r.hi--; } }
@@ -673,7 +679,23 @@ function cpuBall(y){ Object.assign(S,{poss:'cpu',y,down:1,togo:Math.min(10,y),go
 function setKick(who){ Object.assign(S,{needKick:who,poss:who,y:who==='you'?35:65,down:1,togo:10,goFor:false}); }
 function youTD(notes,tag){ S.you+=6; S.tagYou=tag||'td'; S.st.td++; notes.push('TOUCHDOWN! +6'); S.tdY=104; S.tdPoss='you';
   Object.assign(S,{poss:'you',y:98,down:1,togo:2,pat:true,needKick:null}); }
-function cpuTD(notes){ const xp=rf()<.94; S.cpu+=6+(xp?1:0); S.tagCpu='td'; notes.push('They score.'+(xp?' Extra point is good.':' Extra point no good!')); S.tdY=-4; S.tdPoss='cpu'; setKick('cpu'); }
+// They score: now they try the point after, and you get a shot at it. In the 2nd half they go for 2 when the chart says so.
+function cpuTD(notes){ S.cpu+=6; S.tagCpu='td'; S.tdY=-4; S.tdPoss='cpu';
+  const m=S.cpu-S.you, two=!S.ot&&S.q>=3&&[-10,-5,-2,1,5].includes(m);
+  if(S.ot){ notes.push('They score.'); S.needKick='cpu'; return; }
+  S.cpat=two?'two':'xp'; S.poss='cpu'; S.y=2; S.needKick=null; notes.push('They score.'+(two?' They are going for 2!':' Extra point coming.'));
+  if(two) S.pf.push(['THEY GO FOR 2',S.opp+(m<0?' down '+(-m):' up '+m)+' · stop them','cpu']); }
+function cpuPAT(n){ const notes=[], d=Math.abs(n-S.fg); let title;
+  if(S.cpat==='two'){ const stop=d<=6;
+    if(stop){ title='STOPPED!'; S.pf.push(['2-POINT STOP','No good','gold']); notes.push('You read it. Two-point try fails.'); }
+    else { S.cpu+=2; title='THEY CONVERT'; notes.push('Missed by '+(d-6)+'. Two-point try is good.'); } }
+  else { const blocked=d===0, ok=!blocked&&rf()<.97;
+    S.kick={type:'fg',from:2,to:blocked?-1:-10,lat:ok||blocked?0:(rf()<.5?-6:6),poss:'cpu'};
+    if(blocked){ S.st.take++; title='BLOCKED!'; S.pf.push(['BLOCKED!','You got a hand on it','gold']); notes.push('You timed the snap. Kick blocked!'); }
+    else if(ok){ S.cpu+=1; title='EXTRA POINT GOOD'; notes.push('It was '+S.fg+'. Kick is good.'); }
+    else { title='NO GOOD!'; notes.push('Doinked it. Extra point misses!'); } }
+  S.cpat=null; if(!S.needKick) setKick('cpu'); prompt(notes);
+  setBanner(S.fg,title,notes.join(' ')); animate(2,S.y); render(); }
 function fmt(y){ return y<50?'YOUR '+y : y>50?'OPP '+(100-y) : 'MIDFIELD'; }
 // Field goal window on 1-25, tuned to real NFL make rates when you aim down the middle (13). -1 = out of range.
 function fgTol(k){ if(k>62) return -1; if(k>=55) return 6; if(k>=50) return 8; if(k>=40) return 10; if(k>=30) return 11; return 12; }
@@ -705,6 +727,7 @@ function prompt(notes){
   if(S.ot && !S.over && S.you!==S.cpu){ S.over=true; (notes||[]).push(S.you>S.cpu?'Walk-off win!':'Lost in overtime.'); recordGame(); }
   if(S.over){ S.phase='over'; return; }
   if(S.pat){ S.phase='pat'; S.mode=null; return; }
+  if(S.cpat){ S.mode=S.cpat==='two'?'stop2':'blk'; S.fg=ri(1,MAX); S.phase='guess'; return; }
   if(S.needKick==='you'){ S.phase='kickoff'; S.mode=null; return; }
   if(S.needKick==='cpu'){ S.mode='ret'; S.ret=ri(1,MAX); S.phase='guess'; return; }
   if(S.poss==='you'){
@@ -723,13 +746,25 @@ function tap(n){
   sfx.click();
   if(S.mode==='fg') return kick(n);
   if(S.mode==='xp'||S.mode==='two') return pointAfter(n);
+  if(S.mode==='blk'||S.mode==='stop2') return cpuPAT(n);
   if(S.mode==='ret') return kickReturn(n);
   if(S.mode==='onside') return onsideKick(n);
   if(S.mode==='ko') return kickDeep(n);
   const from=S.y, notes=[], r=S.ser, d=Math.abs(n-r.secret), wasDown=S.down;
   let num, title;
+  if((S.mode==='off'||S.mode==='def')&&!r.wrong.length&&!r.op){ r.op=1; S.scout=S.scout||{off:[],def:[]}; S.scout[S.mode].push(n); S.scout[S.mode]=S.scout[S.mode].slice(-6); }
 
-  if(S.mode==='off'){
+  if(S.mode==='off' && S.down===4 && S.goFor){
+    // 4th-down try: hit = guaranteed first down (+ tile bonus). 1 away = 3, 2 away = 2, 3 away = 1. Else nothing.
+    const gain = d===0 ? snowy(tileY(r.secret)) : d<=3 ? 4-d : 0;
+    num = d===0 ? r.secret : n+(n<r.secret?'▲':'▼');
+    S.st.yds+=gain; const ny=S.y+gain;
+    if(d===0){ S.st.hits++; S.st.long=Math.max(S.st.long,gain); title='CONVERTED!'; S.pf.push(['4TH DOWN CONVERSION','+'+gain+' yards','gold']); notes.push('Perfect call on 4th. +'+gain+' yds.'); }
+    else { title=(n<r.secret?'HIGHER':'LOWER')+' THAN '+n; notes.push(gain?(d===1?'One away. ':d===2?'Two away. ':'Three away. ')+'+'+gain+' yds.':'Not close.'); }
+    if(ny>=100) youTD(notes);
+    else if(gain>=S.togo){ youBall(ny); S.st.fd++; if(d) notes.push('Just enough. First down!'); }
+    else { S.st.tod++; notes.push('Turnover on downs. It was '+r.secret+'.'); if(d) S.pf.push(['STOPPED SHORT','Turnover on downs','cpu']); cpuBall(ny); }
+  } else if(S.mode==='off'){
     if(d===0){
       const gain=snowy(yds(r.secret));
       S.st.hits++; if(r.secret<=3||r.secret>=23) S.st.edge=(S.st.edge||0)+1; S.st.hitDown+=S.down; S.st.long=Math.max(S.st.long,gain); S.st.yds+=gain;
@@ -762,6 +797,7 @@ function tap(n){
       // Distance doesn't matter on defense. Their edge numbers (1-3, 23-25) are deep shots: miss one and it's a big play.
       // A near miss still gets a hand on them: one away = +1, within 3 = +2.
       // Defense mirrors offense: the closer your read, the less they get. One away stuffs them; way off (15+) gets you burned.
+      if(d>=20){ const up=n<r.secret; num=n+(up?'▲':'▼'); title='BUSTED COVERAGE!'; S.pf.push(['BUSTED COVERAGE',S.opp+' take it the distance','cpu']); notes.push('Way off. Nobody home. Touchdown from '+(S.y)+' out.'); cpuTD(notes); tick(notes); prompt(notes); setBanner(num,title,notes.join(' ')); animate(from,S.y); render(); return; }
       const deep=d>=15, gain= d<=1?0 : d<=4?snowy(ri(3,5)) : d<=14?snowy(ri(7,10)) : d<=19?snowy(ri(11,15)) : snowy(ri(16,26));
       const up=n<r.secret; narrow(n); num=n+(up?'▲':'▼'); title=(up?'HIGHER':'LOWER')+' THAN '+n;
       if(deep) S.pf.push(['BIG PLAY',S.opp+' +'+gain+' yards','cpu']); else if(d<=1) S.pf.push(['STUFFED!','No gain','gold']);
@@ -786,6 +822,9 @@ function narrow(n){ const r=S.ser; r.wrong.push(n);
   r.secret=cl(r.secret+(S.wx==='rain'?ri(-3,3):ri(-2,2)),r.lo,r.hi); }
 // Edges pay more: middle (13) = +8, edges (1 or 25) = +39.
 function yds(n){ return Math.round(8+Math.abs(n-13)*2.6); }
+// 4th-down try tiles: what you need plus a bonus (+2 middle to +15 edges).
+const go4=()=>S.mode==='off'&&S.down===4&&S.goFor&&S.phase==='guess';
+function tileY(n){ return go4() ? S.togo+Math.round(2+Math.abs(n-13)/12*13) : yds(n); }
 
 function kick(n){
   const from=S.y, k=117-S.y, tol=fgT(k), d=Math.abs(n-S.fg), notes=[]; S.fgDist=k;
@@ -802,7 +841,8 @@ function kick(n){
 
 function tick(notes){
   if(--S.left>0) return;
-  if(S.q>=4){ if(S.kind==='playoff' && S.you===S.cpu){ S.q++; S.left=PLAYS; S.ot=true; notes.push('Tied! OVERTIME. Next score wins.'); S.pf.push(['OVERTIME','Next score wins','gold']); return; }
+  if(S.q>=4){ if(S.cpat){ if(S.cpat==='two'?rf()<.48:rf()<.94) S.cpu+=S.cpat==='two'?2:1; S.cpat=null; }
+    if(S.kind==='playoff' && S.you===S.cpu){ S.q++; S.left=PLAYS; S.ot=true; notes.push('Tied! OVERTIME. Next score wins.'); S.pf.push(['OVERTIME','Next score wins','gold']); return; }
     S.over=true; notes.push('Final whistle.'); recordGame(); return; }
   S.q++; S.left=PLAYS;
   if(S.q===3){ S.pat=false; setKick('you'); notes.push('Halftime. You kick off.'); S.pf.push(['HALFTIME',ME()+' '+S.you+' – '+S.cpu+' '+S.opp,'gold',()=>{}]); }
@@ -948,8 +988,9 @@ function render(){
   $('sQ').textContent=S.over?(S.ot?'FINAL/OT':'FINAL'):S.q>4?'OT':'Q'+S.q; $('sLeft').textContent=S.over?'':S.left+(S.left===1?' play':' plays');
   const SPECIAL={pat:'POINT AFTER',kickoff:'KICKOFF'};
   $('wxTag').textContent=WX[S.wx||'clear'].name; $('wxTag').hidden=!WX[S.wx||'clear'].name;
-  $('dd').textContent= SPECIAL[S.phase] || (S.mode==='ret'?'KICK RETURN':ddText().toUpperCase());
-  $('pips').hidden=!!(SPECIAL[S.phase]||S.mode==='ret');
+  const PATX={blk:'POINT AFTER',stop2:'2-POINT TRY',xp:'POINT AFTER',two:'2-POINT TRY'}[S.mode];
+  $('dd').textContent= SPECIAL[S.phase] || PATX || (S.mode==='ret'?'KICK RETURN':ddText().toUpperCase());
+  $('pips').hidden=!!(SPECIAL[S.phase]||PATX||S.mode==='ret');
   $('spot').textContent=fmt(S.y)+(S.poss==='you'?' · Your ball':' · Their ball');
   const p=$('poss'); p.textContent=S.poss==='you'?ME():S.opp; p.style.background=S.poss==='you'?'var(--you)':'var(--cpu)';
   $('pips').innerHTML=[1,2,3,4].map(i=>'<i class="'+(i<S.down?'used':'')+'"></i>').join('');
@@ -972,6 +1013,8 @@ function render(){
       two:  ['GO FOR 2', 'Within ±5', '<b>Within 5</b> = +2 <i>·</i> <b>Miss</b> = no points'],
       ret:  ['KICK RETURN', 'One guess', '<b>Exact</b> = return TD <i>·</i> <b>Within 2</b> = near midfield <i>·</i> <b>Within 5</b> = your 35 <i>·</i> <b>15+ off</b> = stuffed early'],
       ko:   ['KICKOFF', 'One guess', '<b>Exact</b> = pinned at their 10 <i>·</i> <b>Within 5</b> = touchback <i>·</i> <b>15+ off</b> = big return'],
+      blk:  ['BLOCK THE KICK', 'One guess', '<b>Exact</b> = BLOCKED <i>·</i> <b>Miss</b> = they almost always make it'],
+      stop2:['STOP THE 2', 'Within ±6', '<b>Within 6</b> = stopped <i>·</i> <b>Miss</b> = they get 2'],
       onside:['ONSIDE KICK', 'Within ±2', '<b>Within 2</b> = you recover <i>·</i> <b>Miss</b> = their ball near midfield']};
     if(SP[S.mode]){
       panel.className='panel fg'; buildGrid(MAX);
@@ -986,8 +1029,10 @@ function render(){
       $('gLabel').textContent=S.mode==='def'?'STOP THEIR DRIVE':'CALL YOUR PLAY';
       $('gLeft').textContent=left===1?'1 number left':left+' numbers left';
       $('gKey').innerHTML = S.mode==='def'
-        ? '<b>Hit it</b> = '+(S.down<=2?'INTERCEPTION':S.down===3?'SACK (−7)':'STOP')+' <i>·</i> <b>One away</b> = no gain <i>·</i> <b>Within 4</b> = +3–5 <i>·</i> <b>Miss</b> = +7–10 <i>·</i> <b>15+ off</b> = big play'
+        ? '<b>Hit it</b> = '+(S.down<=2?'INTERCEPTION':S.down===3?'SACK (−7)':'STOP')+' <i>·</i> <b>One away</b> = no gain <i>·</i> <b>Within 4</b> = +3–5 <i>·</i> <b>Miss</b> = +7–10 <i>·</i> <b>15+ off</b> = big play <i>·</i> <b>20+ off</b> = TD'
+        : go4() ? '<b>Hit it</b> = first down + tile yards <i>·</i> <b>1 away</b> = +3 <i>·</i> <b>2 away</b> = +2 <i>·</i> <b>3 away</b> = +1 <i>·</i> <b>Else</b> = turnover'
         : '<b>Hit it</b> = yards on the tile <i>·</i> <b>Within 2</b> = +4 <i>·</i> <b>Within 5</b> = +2 <i>·</i> <b>15+ off</b> = loss';
+      for(let i=1;i<=MAX;i++){ const s=$('n'+i).querySelector('small'); if(s) s.textContent='+'+tileY(i); }
       fill.style.left=((r.lo-1)/MAX*100)+'%'; fill.style.width=(left/MAX*100)+'%';
       r.wrong.forEach(n=>{ const t=document.createElement('i'); t.className='tick'; t.style.left=((n-.5)/MAX*100)+'%'; tr.appendChild(t); });
       for(let i=1;i<=MAX;i++) $('n'+i).className = r.wrong.includes(i)?'wrong' : (i<r.lo||i>r.hi)?'out' : (left<MAX?'inrange':'');
@@ -1004,9 +1049,9 @@ function render(){
   SAVE.live = S.over||S.done ? null : S; persist();
 }
 
-// Going for it: the defense sells out, widening the number back to at least 7 possibilities and re-hiding it.
+// Going for it: the defense sells out, widening the number back to at least 9 possibilities and re-hiding it.
 $('bGo').onclick=()=>{ S.goFor=true; const r=S.ser;
-  while(r.hi-r.lo+1<7){ if(r.lo>1) r.lo--; if(r.hi-r.lo+1<7&&r.hi<MAX) r.hi++; }
+  while(r.hi-r.lo+1<9){ if(r.lo>1) r.lo--; if(r.hi-r.lo+1<9&&r.hi<MAX) r.hi++; }
   r.secret=ri(r.lo,r.hi); r.wrong=[]; r.lastDir=null; S.pf.push(['THE D SELLS OUT','4th & '+S.togo+' · '+(r.hi-r.lo+1)+' numbers in play','cpu']);
   S.phase='guess'; setBanner(null,'GOING FOR IT','The defense reloads. The number is somewhere in '+r.lo+'–'+r.hi+'.'); render(); };
 $('bPunt').onclick=userPunt;
