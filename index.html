@@ -500,6 +500,8 @@ button.link{background:none;border:none;box-shadow:none;padding:0;font-family:va
 .hnav button{padding:13px;font-size:18px}
 .hnav #hBack{background:transparent;box-shadow:none;border:1px solid rgba(255,255,255,.25)}
 .hnav #hBack:disabled{opacity:.3}
+#qNo{background:transparent;box-shadow:none;border:1px solid rgba(255,255,255,.25);font-size:15px}
+.qyes{background:linear-gradient(180deg,#ff6a5c,#c8251a)!important;border-color:#8a1414!important;box-shadow:0 5px 0 #7a1010!important;color:#fff!important;text-shadow:none!important}
 </style>
 
 <div class="wrap">
@@ -658,6 +660,11 @@ button.link{background:none;border:none;box-shadow:none;padding:0;font-family:va
   </form>
 </div>
 
+<div class="howto" id="quitBox" hidden><div class="hcard" role="alertdialog" aria-modal="true" aria-labelledby="qTitle">
+  <div class="htop"><span class="hstep">GAME IN PROGRESS</span></div>
+  <h2 id="qTitle">END THIS GAME?</h2><div class="hbody" id="qBody" style="min-height:0;text-align:center"></div>
+  <div class="hnav" style="margin-top:16px"><button type="button" id="qNo">KEEP PLAYING</button><button type="button" class="snap qyes" id="qYes">END IT</button></div>
+</div></div>
 <div class="howto" id="howto" hidden><div class="hcard" role="dialog" aria-modal="true" aria-labelledby="hTitle">
   <div class="htop"><span class="hstep" id="hStep"></span><button class="hx" id="hClose" type="button" aria-label="Close">✕</button></div>
   <div class="hart" id="hArt"></div><h2 id="hTitle"></h2><div class="hbody" id="hBody"></div>
@@ -813,8 +820,18 @@ function drawRules(){ const r=RULES[hI], last=hI===RULES.length-1;
   $('hDots').innerHTML=RULES.map((_,k)=>'<i'+(k===hI?' class="on"':'')+'></i>').join('');
   $('hBack').disabled=hI===0; $('hNext').textContent=last?(hForced?"LET'S PLAY":'GOT IT'):'NEXT'; $('hClose').hidden=hForced; }
 function closeRules(){ $('howto').hidden=true; if(hForced){ SAVE.rulesSeen=1; persist(); } const d=hDone; hDone=null; if(d) d(); }
-function newGame(kind,oppIdx){
-  if(SAVE.team&&!SAVE.rulesSeen){ return showRules(true,()=>newGame(kind,oppIdx)); }
+// Starting a game while one is live: same season game just resumes; anything else asks first.
+// Bailing on a season or playoff game is a forfeit: it goes down as a loss (0–2, or the real score if you were already losing).
+let qGo=null;
+function forfeit(){ if(!S||S.over||S.done) return; if(S.kind!=='quick'){ if(S.you>=S.cpu){ S.you=0; S.cpu=2; } S.over=true; recordGame(); } S.done=true; persist(); }
+function newGame(kind,oppIdx,ok){
+  const live=S&&!S.done&&!S.over;
+  if(live&&!ok){
+    if(kind!=='quick'&&kind===S.kind&&oppIdx===S.oppIdx){ S.paused=false; showTab('play'); render(); return; }
+    $('qBody').innerHTML=S.kind==='quick'?'You\'re '+S.you+'–'+S.cpu+' vs '+S.oppName+'. Start a new game and this one is <b>gone for good</b>.'
+      :'You\'re '+S.you+'–'+S.cpu+' vs '+S.oppName+'. Leaving a '+(S.kind==='playoff'?'playoff':'season')+' game is a <b>forfeit: it counts as a loss</b>'+(S.kind==='playoff'?' and ends your season':'')+'.';
+    $('qYes').textContent=S.kind==='quick'?'END IT':'FORFEIT'; qGo=()=>{ forfeit(); newGame(kind,oppIdx,true); }; $('quitBox').hidden=false; return; }
+  if(SAVE.team&&!SAVE.rulesSeen){ return showRules(true,()=>newGame(kind,oppIdx,true)); }
   if(S&&S.paused&&!S.over){ /* abandoning a paused game */ }
   if(!SAVE.team) return showTab('play');
   lastSeen=null;
@@ -915,10 +932,10 @@ function tap(n){
       // A near miss still gets a hand on them: one away = +1, within 3 = +2.
       // Defense mirrors offense: the closer your read, the less they get. One away stuffs them; way off (15+) gets you burned.
       if(d>=20){ const up=n<r.secret; num=n+(up?'▲':'▼'); title='BUSTED COVERAGE!'; S.pf.push(['BUSTED COVERAGE',S.opp+' take it the distance','cpu']); notes.push('Way off. Nobody home. Touchdown from '+(S.y)+' out.'); cpuTD(notes); tick(notes); prompt(notes); setBanner(num,title,notes.join(' ')); animate(from,S.y); render(); return; }
-      const deep=d>=15, gain= d<=1?-ri(1,3) : d<=4?snowy(ri(4,6)) : d<=14?snowy(ri(8,11)) : d<=19?snowy(ri(11,15)) : snowy(ri(16,26));
+      const deep=d>=15, gain= d<=lossR()?-ri(1,3) : d<=4?snowy(ri(4,6)) : d<=14?snowy(ri(8,11)) : d<=19?snowy(ri(11,15)) : snowy(ri(16,26));
       const up=n<r.secret; narrow(n); num=n+(up?'▲':'▼'); title=(up?'HIGHER':'LOWER')+' THAN '+n;
-      if(deep) S.pf.push(['BIG PLAY',S.opp+' +'+gain+' yards','cpu']); else if(d<=1) S.pf.push(['TACKLE FOR LOSS',S.opp+' lose '+(-gain),'gold']);
-      notes.push(d<=1?'One away. Tackle for loss, they lose '+(-gain)+'.':deep?'Way off. Big play, they gain '+gain+'.':'They gain '+gain+'. They shift.');
+      if(deep) S.pf.push(['BIG PLAY',S.opp+' +'+gain+' yards','cpu']); else if(gain<0) S.pf.push(['TACKLE FOR LOSS',S.opp+' lose '+(-gain),'gold']);
+      notes.push(gain<0?(d===1?'One away':'Two away')+'. Tackle for loss, they lose '+(-gain)+'.':deep?'Way off. Big play, they gain '+gain+'.':'They gain '+gain+'. They shift.');
       const ny=S.y-gain;
       if(ny>=100){ S.you+=2; S.tagYou='safety'; notes.push('Dropped in their end zone. SAFETY! +2'); setKick('cpu'); }
       else if(ny<=0){ cpuTD(notes); }
@@ -952,6 +969,8 @@ function trapHit(from,notes){ const r=S.ser, fum=rf()<.5; let title; S.pstk=0;
     notes.push((fum?'Forced fumble! Your ball.':'Picked off! Your ball.')+' You found their trap number.');
     youBall(fum?S.y:Math.min(99,S.y+ri(0,15))); }
   tick(notes); prompt(notes); setBanner('💥',title,notes.join(' ')); animate(from,S.y); render(); }
+// Defense loss zone: within 2 while 17+ numbers are in play (early downs), then only 1 away.
+const lossR=()=>{ const r=S.ser; return r&&r.hi-r.lo+1>=17?2:1; };
 const stopR=()=>S.togo<=1?1:S.togo<=2?2:3;
 const go4=()=>S.mode==='off'&&S.down===4&&S.goFor&&S.phase==='guess';
 // Near misses pay less as the range shrinks (hits always pay the full tile and move the chains). Full value with 9+ left, then 85%, 65%, 50%.
@@ -1101,7 +1120,14 @@ document.addEventListener('pointerdown',()=>{ const c=audio(); if(c&&c.state==='
 
 /* ---------- UI ---------- */
 const GOOD=['HOUSE CALL!','BIG PLAY!','NICE GAIN','MOVED THE CHAINS','PICKED OFF!','SACK!','STOPPED!','IT\'S GOOD!'];
+// Kicks: hold the result until the ball actually gets there. Show "KICK IS UP" while it flies.
+let bnPend=null, bnTok=0;
 function setBanner(n,t,sub){
+  bnTok++;
+  if(S&&S.kick&&!matchMedia('(prefers-reduced-motion: reduce)').matches){ bnPend=[n,t,sub,bnTok]; showBanner(n,'KICK IS UP…',''); return; }
+  showBanner(n,t,sub); }
+function releaseBanner(ms){ if(!bnPend) return; const p=bnPend; bnPend=null; setTimeout(()=>{ if(p[3]===bnTok) showBanner(p[0],p[1],p[2]); },ms); }
+function showBanner(n,t,sub){
   $('bNum').textContent=n==null?'—':n; $('bTitle').textContent=t; $('bSub').textContent=sub;
   const bad = t==='NO GOOD' || /They score|They kick a field goal|Turnover on downs\. It was/.test(sub);
   const tone = n==null&&!bad ? 'idle' : /^(HIGHER|LOWER)/.test(t) ? (bad?'bad':'hint') : GOOD.includes(t) ? 'good' : bad ? 'bad' : '';
@@ -1165,7 +1191,7 @@ function render(){
       $('gLeft').textContent=left===1?'1 number left':left+' numbers left';
       $('gKey').innerHTML = S.mode==='def'
         ? S.down===4 ? '<b>4th & '+S.togo+'</b> <i>·</i> <b>Within '+stopR()+'</b> = STOP <i>·</i> <b>Else</b> = they convert'
-        : '<b>Hit it</b> = '+(S.down<=2?'INTERCEPTION':S.down===3?'SACK (−7)':'STOP')+' <i>·</i> <b>One away</b> = loss <i>·</i> <b>Within 4</b> = +4–6 <i>·</i> <b>Miss</b> = +8–11 <i>·</i> <b>15+ off</b> = big play <i>·</i> <b>20+ off</b> = TD'
+        : '<b>Hit it</b> = '+(S.down<=2?'INTERCEPTION':S.down===3?'SACK (−7)':'STOP')+' <i>·</i> <b>'+(lossR()>1?'Within 2':'One away')+'</b> = loss <i>·</i> <b>Within 4</b> = +4–6 <i>·</i> <b>Miss</b> = +8–11 <i>·</i> <b>15+ off</b> = big play <i>·</i> <b>20+ off</b> = TD'
         : go4() ? '<b>Hit it</b> = first down + tile yards <i>·</i> <b>1 away</b> = +3 <i>·</i> <b>2 away</b> = +2 <i>·</i> <b>3 away</b> = +1 <i>·</i> <b>Else</b> = turnover'
         : '<b>Hit it</b> = yards on the tile <i>·</i> <b>Within 2</b> = +'+Math.round(6*shrink())+' <i>·</i> <b>Within 5</b> = +'+Math.max(1,Math.round(2*shrink()))+' <i>·</i> <b>15+ off</b> = loss'+(shrink()<1?' <i>·</i> <b>Few left</b> = smaller near misses':'');
       $('bBack4').hidden=!go4(); $('gLeft').hidden=go4();
@@ -1749,6 +1775,8 @@ document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{ confirmNew=
 const commit=m=>{ SE().mode=m; SE().upg={coins:0,qb:0,line:0,kick:0,def:0}; persist(); sfx.chime(); renderMenu(); };
 $('mPure').onclick=()=>commit('pure');
 $('mUpg').onclick=()=>commit('upg');
+$('qNo').onclick=()=>{ $('quitBox').hidden=true; qGo=null; };
+$('qYes').onclick=()=>{ $('quitBox').hidden=true; const g=qGo; qGo=null; if(g) g(); };
 $('bResume').onclick=()=>{ S.paused=false; showTab('play'); render(); };
 $('hNext').onclick=()=>{ if(hI<RULES.length-1){ hI++; drawRules(); } else closeRules(); };
 $('hBack').onclick=()=>{ if(hI>0){ hI--; drawRules(); } };
@@ -1793,8 +1821,9 @@ let flashDelay=350;
 // New play = fresh banners: anything still waiting from an older play is dropped (scores/halftime/final are kept), and a stale one on screen is cut short.
 let fGen=0, fT=null, fCur=null;
 function flash(word,sub,tone,fn){
-  for(let i=fq.length-1;i>=0;i--) if(fq[i][4]<fGen&&!fq[i][3]) fq.splice(i,1);
-  if(fCur&&fCur[4]<fGen&&!fCur[3]&&fBusy){ clearTimeout(fT); fBusy=false; fCur=null; $('flash').classList.remove('show'); }
+  const keep=it=>/FINAL|HALFTIME/.test(it[0]);
+  for(let i=fq.length-1;i>=0;i--) if(fq[i][4]<fGen&&!keep(fq[i])) fq.splice(i,1);
+  if(fCur&&fCur[4]<fGen&&!keep(fCur)&&fBusy){ clearTimeout(fT); fBusy=false; fCur=null; $('flash').classList.remove('show'); }
   fq.push([word,sub,tone,fn,fGen]); if(!fBusy){ fBusy=true; fT=setTimeout(nextFlash,flashDelay); } flashDelay=350; }
 function bump(id,key,val,plus){ S[key]=val; const el=$(id); el.textContent=val; el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
   const f=document.createElement('span'); f.className='plus'; f.textContent='+'+plus; el.parentNode.appendChild(f); setTimeout(()=>f.remove(),1400); }
@@ -1856,7 +1885,7 @@ function animate(a,b){
     legs.push({a:kk.from,b:kk.to,dur:fly,poss:kk.poss,set:kk.from,kick:kk,linear:1});
     legs.push({a:kk.to,b:kk.to,dur:1000,poss:kk.poss,set:kk.from,kick:kk,landed:1});
     legs.push({a:b,b,dur:1500,enter:1});
-    flashDelay=pre+600+fly;
+    flashDelay=pre+600+fly; releaseBanner(flashDelay);
     anim={i:0,t0:performance.now(),legs}; return;
   }
   if(td!=null){
