@@ -1845,6 +1845,8 @@ function flash(word,sub,tone,fn){
   const keep=it=>/FINAL|HALFTIME/.test(it[0]);
   for(let i=fq.length-1;i>=0;i--) if(fq[i][4]<fGen&&!keep(fq[i])) fq.splice(i,1);
   if(fCur&&fCur[4]<fGen&&!keep(fCur)&&fBusy){ clearTimeout(fT); fBusy=false; fCur=null; $('flash').classList.remove('show'); }
+  // PERFECT! is about your tap, not the play that follows (punt, kick, return), so it shows right away and goes first.
+  if(tone==='perf'){ fq.unshift([word,sub,tone,fn,fGen]); if(!fBusy){ fBusy=true; fT=setTimeout(nextFlash,60); } return; }
   fq.push([word,sub,tone,fn,fGen]); if(!fBusy){ fBusy=true; fT=setTimeout(nextFlash,flashDelay); } flashDelay=350; }
 function bump(id,key,val,plus){ S[key]=val; const el=$(id); el.textContent=val; el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
   const f=document.createElement('span'); f.className='plus'; f.textContent='+'+plus; el.parentNode.appendChild(f); setTimeout(()=>f.remove(),1400); }
