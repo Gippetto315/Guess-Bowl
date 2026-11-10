@@ -366,7 +366,7 @@ button.link{background:none;border:none;box-shadow:none;padding:0;font-family:va
 .flash .fb{--t:var(--fg);min-width:72%;padding:10px 28px 8px;background:rgba(8,14,10,.84);border-top:3px solid var(--t);border-bottom:3px solid var(--t);transform:skewX(-10deg);text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.45)}
 .flash .fw{font-family:var(--display);font-weight:800;font-style:italic;font-size:46px;line-height:1;color:var(--t);letter-spacing:.02em}
 .flash .fs2{font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--fg);margin-top:5px}
-.flash.f-you .fb{--t:var(--you)} .flash.f-cpu .fb{--t:var(--cpu)} .flash.f-gold .fb{--t:var(--gold)}
+.flash.f-you .fb{--t:var(--you)} .flash.f-cpu .fb{--t:var(--cpu)} .flash.f-gold .fb{--t:var(--gold)} .flash.f-help .fb{--t:#45f59a}
 .flash.show{animation:flashIn 1.9s ease forwards}
 /* Perfect! stamp: gold, bouncy, sparkle ring */
 .flash.perf .fb{--t:#ffd23f;transform:rotate(-5deg);border:3px solid #ffd23f;border-radius:18px;min-width:0;padding:12px 26px 10px;background:radial-gradient(120% 140% at 50% 0%,#3d3208,#120e02 70%);box-shadow:0 0 0 4px rgba(255,210,63,.18),0 0 40px rgba(255,210,63,.55),0 12px 30px rgba(0,0,0,.5);position:relative}
@@ -760,7 +760,7 @@ function newSeries(){ const side=S.poss==='you'?'off':'def', c=scoutC(side);
   S.ser={secret:c==null?ri(1,MAX):scoutPick(c),lo:1,hi:MAX,wrong:[]};
   // Hidden trap: one number per drive is a turnover. Always 6+ away from the real number, and only live while 10+ numbers remain.
   { const cand=[]; for(let n=1;n<=MAX;n++) if(Math.abs(n-S.ser.secret)>=6) cand.push(n); S.ser.trap=cand[ri(0,cand.length-1)]; }
-  if(c!=null){ S.ser.sc=c; if(S.pf) S.pf.push(['SCOUTED!','They won\'t put it near '+c,'cpu']); }
+  if(c!=null){ S.ser.sc=c; if(S.pf) S.pf.push(['SCOUTED!','They won\'t put it near '+c,'help']); }
   // Team upgrades: QB (your offense) or film study (your defense) rule out 2 numbers per level at the start of each set of downs.
   const k=2*upgLvl(S.poss==='you'?'qb':'def'), r=S.ser;
   for(let i=0;i<k;i++){ const canLo=r.secret>r.lo, canHi=r.secret<r.hi; if(!canLo&&!canHi) break; if(canLo&&(!canHi||rf()<.5)) r.lo++; else r.hi--; } }
@@ -869,6 +869,7 @@ function prompt(notes){
 function tap(n){
   sfx.click();
   if(S.mode==='fg') return kick(n);
+  if(S.mode==='punt') return puntKick(n);
   if(S.mode==='xp'||S.mode==='two') return pointAfter(n);
   if(S.mode==='blk'||S.mode==='stop2') return cpuPAT(n);
   if(S.mode==='ret') return kickReturn(n);
@@ -932,7 +933,7 @@ function tap(n){
       // A near miss still gets a hand on them: one away = +1, within 3 = +2.
       // Defense mirrors offense: the closer your read, the less they get. One away stuffs them; way off (15+) gets you burned.
       if(d>=20){ const up=n<r.secret; num=n+(up?'▲':'▼'); title='BUSTED COVERAGE!'; S.pf.push(['BUSTED COVERAGE',S.opp+' take it the distance','cpu']); notes.push('Way off. Nobody home. Touchdown from '+(S.y)+' out.'); cpuTD(notes); tick(notes); prompt(notes); setBanner(num,title,notes.join(' ')); animate(from,S.y); render(); return; }
-      const deep=d>=15, gain= d<=lossR()?-ri(1,3) : d<=4?snowy(ri(4,6)) : d<=14?snowy(ri(8,11)) : d<=19?snowy(ri(11,15)) : snowy(ri(16,26));
+      const deep=d>=15, gain= d<=lossR()?-ri(1,3) : d<=4?snowy(ri(4,6)) : d<=8?snowy(ri(7,10)) : d<=14?snowy(ri(8,11)) : d<=19?snowy(ri(11,15)) : snowy(ri(16,26));
       const up=n<r.secret; narrow(n); num=n+(up?'▲':'▼'); title=(up?'HIGHER':'LOWER')+' THAN '+n;
       if(deep) S.pf.push(['BIG PLAY',S.opp+' +'+gain+' yards','cpu']); else if(gain<0) S.pf.push(['TACKLE FOR LOSS',S.opp+' lose '+(-gain),'gold']);
       notes.push(gain<0?(d===1?'One away':'Two away')+'. Tackle for loss, they lose '+(-gain)+'.':deep?'Way off. Big play, they gain '+gain+'.':'They gain '+gain+'. They shift.');
@@ -1012,6 +1013,25 @@ function cpuFG(notes){
   if(good){ S.cpu+=3; S.tagCpu='fg'; setKick('cpu'); notes.push('They kick a field goal. +3'); }
   else { S.pf.push(['NO GOOD',S.fgDist+' yards · Their kick misses!','you']); youBall(S.y); notes.push('Their field goal misses!'); }
   tick(notes); prompt(notes);
+}
+// Punt is a guess too. Net yards by how close you get (NFL average is about 41–42 net):
+// Most punts are routine: within 16 is a normal ~40. Exact 55 (pins them deep), within 3 ~45,
+// 17–20 off short ~33, 21+ off shank ~25, and about 1 in 200 gets blocked.
+function puntKick(n){
+  const from=S.y, d=Math.abs(n-S.fg), notes=[]; S.st.punts++;
+  if(rf()<.005){ const ny=Math.max(1,S.y-ri(0,8)); S.kick={type:'punt',from,to:from+3,poss:'you'}; S.pf.push(['BLOCKED!','They got a hand on it','cpu']);
+    cpuBall(ny); notes.push('Punt blocked! Their ball at '+fmt(S.y)+'.'); tick(notes); prompt(notes); setBanner(S.fg,'BLOCKED',notes.join(' ')); animate(from,S.y); render(); return; }
+  const base=d===0?55:d<=3?45:d<=16?40:d<=20?33:25, net=Math.max(15,base+ri(-3,3)+(S.wx==='wind'?ri(-6,6):0));
+  let ny=S.y+net, title, sub;
+  if(ny>=100){ if(d===0){ ny=100-ri(2,8); title='PINNED!'; sub='Downed at their '+(100-ny)+'.'; } else { ny=100; title='TOUCHBACK'; sub='Into the end zone.'; } }
+  else { title=d===0?'BOOMING PUNT!':d<=3?'GREAT PUNT':d<=16?'PUNT':d<=20?'SHORT PUNT':'SHANKED IT'; sub=net+' yards.'; }
+  S.kick={type:'punt',from,to:Math.min(ny===100?106:ny,106),poss:'you'};
+  if(d===0) S.pf.push([title,sub,'gold']); else if(d>20) S.pf.push(['SHANK!',net+' yards','cpu']);
+  ny>=100?cpuBall(80):cpuBall(ny);
+  notes.push(sub,'It was '+S.fg+'.','Their ball at '+fmt(S.y)+'.');
+  tick(notes); prompt(notes);
+  setBanner(S.fgShown=S.fg,title,notes.join(' '));
+  animate(from,S.y); render();
 }
 function userPunt(){
   const from=S.y, ny=S.y+ri(36,46)+(S.wx==='wind'?ri(-8,8):0), notes=[]; S.st.punts++;
@@ -1168,6 +1188,7 @@ function render(){
     const panel=$('guessBox'), fill=$('fill'), tr=$('track');
     tr.querySelectorAll('.tick').forEach(e=>e.remove());
     const SP={
+      punt: ['PUNT IT', 'Get close', '<b>Exact</b> = boomer <i>·</i> <b>Within 3</b> = great <i>·</i> <b>Within 16</b> = normal <i>·</i> <b>17+ off</b> = short'],
       fg:   ['KICK IT · '+(117-S.y)+' YDS', 'Land '+tolTxt(fgT(117-S.y)), '<b>Close enough</b> = 3 points <i>·</i> <b>One hidden number</b> = BLOCKED'],
       xp:   ['EXTRA POINT', 'Land within ±11', '<b>Close enough</b> = +1 <i>·</i> <b>One hidden number</b> = BLOCKED'],
       two:  ['GO FOR 2', 'Within ±5', '<b>Within 5</b> = +2 <i>·</i> <b>Miss</b> = no points'],
@@ -1176,7 +1197,7 @@ function render(){
       blk:  ['BLOCK THE KICK', 'One guess', '<b>Exact</b> = BLOCKED <i>·</i> <b>Miss</b> = they almost always make it'],
       stop2:['STOP THE 2', 'Within ±6', '<b>Within 6</b> = stopped <i>·</i> <b>Miss</b> = they get 2'],
       onside:['ONSIDE KICK', 'Within ±2', '<b>Within 2</b> = you recover <i>·</i> <b>Miss</b> = their ball near midfield']};
-    if(SP[S.mode]){ $('bBack4').hidden=true; $('gLeft').hidden=false; }
+    if(SP[S.mode]){ const b4=S.mode==='punt'||(S.mode==='fg'&&S.down===4); $('bBack4').hidden=!b4; $('bBack4').textContent='← CHANGE CALL'; $('gLeft').hidden=b4; }
     if(SP[S.mode]){
       panel.className='panel fg'; buildGrid(MAX);
       $('gLabel').textContent=SP[S.mode][0];
@@ -1191,10 +1212,10 @@ function render(){
       $('gLeft').textContent=left===1?'1 number left':left+' numbers left';
       $('gKey').innerHTML = S.mode==='def'
         ? S.down===4 ? '<b>4th & '+S.togo+'</b> <i>·</i> <b>Within '+stopR()+'</b> = STOP <i>·</i> <b>Else</b> = they convert'
-        : '<b>Hit it</b> = '+(S.down<=2?'INTERCEPTION':S.down===3?'SACK (−7)':'STOP')+' <i>·</i> <b>'+(lossR()>1?'Within 2':'One away')+'</b> = loss <i>·</i> <b>Within 4</b> = +4–6 <i>·</i> <b>Miss</b> = +8–11 <i>·</i> <b>15+ off</b> = big play <i>·</i> <b>20+ off</b> = TD'
+        : '<b>Hit it</b> = '+(S.down<=2?'INTERCEPTION':S.down===3?'SACK (−7)':'STOP')+' <i>·</i> <b>'+(lossR()>1?'Within 2':'One away')+'</b> = loss <i>·</i> <b>Within 4</b> = +4–6 <i>·</i> <b>5–8 off</b> = +7–10 <i>·</i> <b>Further</b> = +8–11 <i>·</i> <b>15+ off</b> = big play <i>·</i> <b>20+ off</b> = TD'
         : go4() ? '<b>Hit it</b> = first down + tile yards <i>·</i> <b>1 away</b> = +3 <i>·</i> <b>2 away</b> = +2 <i>·</i> <b>3 away</b> = +1 <i>·</i> <b>Else</b> = turnover'
         : '<b>Hit it</b> = yards on the tile <i>·</i> <b>Within 2</b> = +'+Math.round(6*shrink())+' <i>·</i> <b>Within 5</b> = +'+Math.max(1,Math.round(2*shrink()))+' <i>·</i> <b>15+ off</b> = loss'+(shrink()<1?' <i>·</i> <b>Few left</b> = smaller near misses':'');
-      $('bBack4').hidden=!go4(); $('gLeft').hidden=go4();
+      $('bBack4').hidden=!go4(); $('gLeft').hidden=go4(); $('bBack4').textContent='← PUNT / KICK';
       for(let i=1;i<=MAX;i++){ const s=$('n'+i).querySelector('small'); if(s) s.textContent='+'+tileY(i); }
       fill.style.left=((r.lo-1)/MAX*100)+'%'; fill.style.width=(left/MAX*100)+'%';
       r.wrong.forEach(n=>{ const t=document.createElement('i'); t.className='tick'; t.style.left=((n-.5)/MAX*100)+'%'; tr.appendChild(t); });
@@ -1217,8 +1238,8 @@ $('bGo').onclick=()=>{ S.goFor=true; const r=S.ser;
   while(r.hi-r.lo+1<9){ if(r.lo>1) r.lo--; if(r.hi-r.lo+1<9&&r.hi<MAX) r.hi++; }
   r.secret=ri(r.lo,r.hi); r.wrong=[]; r.lastDir=null; S.pf.push(['THE D SELLS OUT','4th & '+S.togo+' · '+(r.hi-r.lo+1)+' numbers in play','cpu']);
   S.phase='guess'; setBanner(null,'GOING FOR IT','The defense reloads. The number is somewhere in '+r.lo+'–'+r.hi+'.'); render(); };
-$('bPunt').onclick=userPunt;
-$('bBack4').onclick=()=>{ S.goFor=false; S.phase='fourth'; setBanner(null,'4TH & '+S.togo,'Changed your mind? Punt it, kick it, or go for it.'); render(); };
+$('bPunt').onclick=()=>{ S.mode='punt'; S.fg=ri(1,MAX); S.phase='guess'; setBanner(null,'PUNT','One guess. The closer you get, the better the punt.'); render(); };
+$('bBack4').onclick=()=>{ S.goFor=false; if(S.mode==='punt'||S.mode==='fg') S.mode='off'; S.phase='fourth'; setBanner(null,'4TH & '+S.togo,'Changed your mind? Punt it, kick it, or go for it.'); render(); };
 const pickHidden=()=>{ S.fg=ri(1,MAX); do{ S.block=ri(1,MAX); }while(S.block===S.fg); };
 $('bXP').onclick=()=>{ S.mode='xp'; pickHidden(); S.phase='guess'; setBanner(null,'EXTRA POINT','Land within ±11 of the number. Dodge the block.'); render(); };
 $('bTwo').onclick=()=>{ S.mode='two'; pickHidden(); S.phase='guess'; setBanner(null,'GO FOR 2','One snap from the 2. Land within ±5.'); render(); };
