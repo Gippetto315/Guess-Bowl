@@ -528,6 +528,8 @@ button.link{background:none;border:none;box-shadow:none;padding:0;font-family:va
 @keyframes splRays{0%{opacity:0;transform:rotate(0) scale(.6)}25%{opacity:1}100%{opacity:.7;transform:rotate(40deg) scale(1)}}
 @keyframes splOut{to{opacity:0;transform:scale(1.6);visibility:hidden}}
 @media (prefers-reduced-motion: reduce){.splash,.splash *{animation-duration:.01s!important;animation-delay:0s!important}.splash{animation:splOut .4s ease 1s forwards!important}}
+.aboutlink{display:block;margin:14px auto 4px;background:none;border:0;box-shadow:none;color:var(--muted,#8d98bf);font-size:13px;font-weight:600;letter-spacing:.04em;text-decoration:underline;text-underline-offset:3px;padding:8px}
+.adev{width:84px;height:84px;border-radius:50%;display:grid;place-items:center;font-family:var(--display);font-weight:900;font-style:italic;font-size:32px;color:#0b0f1a;background:radial-gradient(circle at 35% 30%,#fff2a8,#ffd23f 55%,#b8860b);box-shadow:0 0 0 4px #004c54,0 0 0 7px #a5acaf,0 12px 26px rgba(0,0,0,.5)}
 </style>
 
 <div class="wrap">
@@ -736,7 +738,22 @@ button.link{background:none;border:none;box-shadow:none;padding:0;font-family:va
   <g fill="url(#sp_rbLace)"><rect x="154" y="40" width="8" height="32" rx="4" transform="rotate(-7 158 56)"/><rect x="168" y="37" width="8" height="32" rx="4" transform="rotate(-5 172 53)"/><rect x="182" y="35" width="8" height="32" rx="4" transform="rotate(-2.5 186 51)"/><rect x="196" y="34" width="8" height="32" rx="4" transform="rotate(0 200 50)"/><rect x="210" y="35" width="8" height="32" rx="4" transform="rotate(2.5 214 51)"/><rect x="224" y="37" width="8" height="32" rx="4" transform="rotate(5 228 53)"/><rect x="238" y="40" width="8" height="32" rx="4" transform="rotate(7 242 56)"/></g>
 </g>
 <path d="M48 120 C 64 74, 116 28, 200 28 C 284 28, 336 74, 352 120 C 336 166, 284 212, 200 212 C 116 212, 64 166, 48 120 Z" fill="none" stroke="#1d0a02" stroke-width="2.5"/>
-</svg></g></g></svg><i class="spl-shine"></i></div><div class="spl-tap">TAP TO SKIP</div></div>
+</svg></g></g></svg><i class="spl-shine"></i></div></div>
+<div class="howto" id="aboutBox" hidden><div class="hcard" role="dialog" aria-modal="true" aria-labelledby="aTitle">
+  <div class="htop"><span class="hstep">GUESS BOWL · V1.0</span><button class="hx" id="aClose" type="button" aria-label="Close">✕</button></div>
+  <div class="hart"><span class="adev" style="font-size:44px">G</span></div>
+  <h2 id="aTitle">ABOUT THE DEVELOPER</h2>
+  <div class="hbody" style="min-height:0;max-height:46vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:4px">
+    <p style="margin:0 0 10px"><b>Gippetto315</b> is a man. He was born at a young age and has been getting older ever since, which he describes as "a lot." He is an avid user of his eyes, often both at the same time.</p>
+    <p style="margin:0 0 10px">He enjoys football, the color of grass, and standing near tables with food. Friends describe him as "present" and "a person we have met." He has never lost a game of Guess Bowl where he had more points at the end.</p>
+    <p style="margin:0 0 10px">He built this entire game on an iPhone using his thumbs, which he has had since birth and ranks among his top two thumbs. He does own a computer. They are not on speaking terms.</p>
+    <p style="margin:0 0 10px">He once read the terms and conditions all the way through, by accident. He <span style="white-space:nowrap">describes Tuesdays as "there."</span> His hobbies include doing, being, and tigers. He also made <b>Four Leaf</b> 🍀, for people who find football not stressful enough.</p>
+    <p style="margin:0 0 10px">He is survived by everyone, because he is still alive. In lieu of flowers, please punt on 4th and long.</p>
+    <p style="margin:0">One more thing: you won't find a single star logo anywhere in this league. <b>That was on purpose.</b></p>
+    <p style="margin:12px 0 0;text-align:center;font-family:var(--display);font-weight:900;font-style:italic;font-size:26px;color:#fff">GO BIRDS. 🦅</p>
+  </div>
+  <div class="hnav" style="grid-template-columns:1fr;margin-top:16px"><button type="button" class="snap" id="aOk">BACK TO THE GAME</button></div>
+</div></div>
 <div class="howto" id="quitBox" hidden><div class="hcard" role="alertdialog" aria-modal="true" aria-labelledby="qTitle">
   <div class="htop"><span class="hstep">GAME IN PROGRESS</span></div>
   <h2 id="qTitle">END THIS GAME?</h2><div class="hbody" id="qBody" style="min-height:0;text-align:center"></div>
@@ -780,6 +797,8 @@ button.link{background:none;border:none;box-shadow:none;padding:0;font-family:va
     <button class="dtile purple" id="tTro" type="button"><span class="dk2">TROPHIES</span><span class="dv" id="tTroV">0 Rings</span></button>
     <button class="dtile red" id="tStats" type="button"><span class="dk2">STATS</span><span class="dv">Career</span></button>
   </div>
+
+  <button class="aboutlink" id="bAbout" type="button">About the developer</button>
 
   <div class="dup" id="upgCard" hidden>
     <div class="dk2">UPGRADES</div>
@@ -1674,6 +1693,8 @@ if(!('mode' in SAVE.season)){ const on=SAVE.upg&&SAVE.upg.on; SAVE.season.mode=S
   SAVE.season.upg=on?Object.assign({coins:0,qb:0,line:0,kick:0,def:0},SAVE.upg):{coins:0,qb:0,line:0,kick:0,def:0}; }
 function persist(){ try{ localStorage.setItem(KEY,JSON.stringify(SAVE)); }catch(e){} }
 const SE=()=>SAVE.season, TM=i=>SE().teams[i];
+// Claude preview only (not the real app on github.io): skip team naming with a stand-in team.
+if(!SAVE.team&&!/github\.io$/.test(location.hostname)){ SAVE.team={city:'Dalton',nick:'Embers',style:'eagle',color:2,trim:0}; const t0=SE().teams[0]; t0.name=myName(); t0.short=ME(); }
 
 function apply(a,b,sa,sb){ const A=TM(a),B=TM(b);
   A.pf+=sa;A.pa+=sb;B.pf+=sb;B.pa+=sa;
@@ -1874,9 +1895,13 @@ const commit=m=>{ SE().mode=m; SE().upg={coins:0,qb:0,line:0,kick:0,def:0}; pers
 $('mPure').onclick=()=>commit('pure');
 $('mUpg').onclick=()=>commit('upg');
 // Splash: plays on every launch, tap to skip, then removes itself.
-{ const sp=$('splash'); const done=()=>{ if(sp.isConnected) sp.remove(); };
-  sp.addEventListener('pointerdown',()=>{ sp.classList.add('go'); setTimeout(done,360); },{once:true});
+// Taps during the splash (and for a moment after) are swallowed so they can't hit buttons underneath.
+{ const sp=$('splash'); let block=true; const unblock=()=>setTimeout(()=>{ block=false; },450);
+  const done=()=>{ if(sp.isConnected){ sp.remove(); unblock(); } };
+  ['click','pointerup','touchend'].forEach(ev=>document.addEventListener(ev,e=>{ if(block){ e.stopPropagation(); if(ev==='click') e.preventDefault(); } },true));
   setTimeout(done,3200); }
+$('bAbout').onclick=()=>{ $('aboutBox').hidden=false; };
+$('aClose').onclick=$('aOk').onclick=()=>{ $('aboutBox').hidden=true; };
 $('qNo').onclick=()=>{ $('quitBox').hidden=true; qGo=null; };
 $('qYes').onclick=()=>{ $('quitBox').hidden=true; const g=qGo; qGo=null; if(g) g(); };
 $('bResume').onclick=()=>{ S.paused=false; showTab('play'); render(); };
