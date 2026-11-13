@@ -1029,8 +1029,8 @@ function tap(n){
       // A near miss still gets a hand on them: one away = +1, within 3 = +2.
       // Defense mirrors offense: the closer your read, the less they get. One away stuffs them; way off (15+) gets you burned.
       if(d>=20){ const up=n<r.secret; num=n+(up?'▲':'▼'); title='BUSTED COVERAGE!'; S.pf.push(['BUSTED COVERAGE',S.opp+' take it the distance','cpu']); notes.push('Way off. Nobody home. Touchdown from '+(S.y)+' out.'); cpuTD(notes); tick(notes); prompt(notes); setBanner(num,title,notes.join(' ')); animate(from,S.y); render(); return; }
-      const deep=d>=15, gain= d<=lossR()?-ri(1,3) : d<=4?snowy(ri(4,6)) : d<=8?snowy(ri(7,10)) : d<=14?snowy(ri(8,11)) : d<=19?snowy(ri(11,15)) : snowy(ri(16,26));
-      const up=n<r.secret; narrow(n); num=n+(up?'▲':'▼'); title=(up?'HIGHER':'LOWER')+' THAN '+n;
+      const deep=d>=15, gain= d<=lossR()?-ri(1,3) : d<=4?snowy(ri(5,7)) : d<=8?snowy(ri(7,10)) : d<=14?snowy(ri(9,12)) : d<=19?snowy(ri(11,15)) : snowy(ri(16,26));
+      const up=n<r.secret; narrow(n,1); num=n+(up?'▲':'▼'); title=(up?'HIGHER':'LOWER')+' THAN '+n;
       if(deep) S.pf.push(['BIG PLAY',S.opp+' +'+gain+' yards','cpu']); else if(gain<0) S.pf.push(['TACKLE FOR LOSS',S.opp+' lose '+(-gain),'gold']);
       notes.push(gain<0?(d===1?'One away':'Two away')+'. Tackle for loss, they lose '+(-gain)+'.':deep?'Way off. Big play, they gain '+gain+'.':'They gain '+gain+'. They shift.');
       const ny=S.y-gain;
@@ -1048,10 +1048,10 @@ function tap(n){
 }
 
 // After a miss: tighten by the hint, then the defense shifts the number up to 2 either way — but only inside what's still possible.
-function narrow(n){ const r=S.ser; r.wrong.push(n);
+function narrow(n,def){ const r=S.ser; r.wrong.push(n);
   if(n<r.secret) r.lo=Math.max(r.lo,n+1); else r.hi=Math.min(r.hi,n-1);
   r.lastDir = n<r.secret ? 'up' : 'down';
-  r.secret=cl(r.secret+(S.wx==='rain'?ri(-3,3):ri(-2,2)),r.lo,r.hi); }
+  const sh=(S.wx==='rain'?3:2)+(def?1:0); r.secret=cl(r.secret+ri(-sh,sh),r.lo,r.hi); }
 // Edges pay more: middle (13) = +8, edges (1 or 25) = +39.
 function yds(n){ return Math.round(8+Math.abs(n-13)*2.6); }
 // 4th-down try tiles: what you need plus a bonus (+2 middle to +15 edges).
@@ -1308,7 +1308,7 @@ function render(){
       $('gLeft').textContent=left===1?'1 number left':left+' numbers left';
       $('gKey').innerHTML = S.mode==='def'
         ? S.down===4 ? '<b>4th & '+S.togo+'</b> <i>·</i> <b>Within '+stopR()+'</b> = STOP <i>·</i> <b>Else</b> = they convert'
-        : '<b>Hit it</b> = '+(S.down<=2?'INTERCEPTION':S.down===3?'SACK (−7)':'STOP')+' <i>·</i> <b>'+(lossR()>1?'Within 2':'One away')+'</b> = loss <i>·</i> <b>Within 4</b> = +4–6 <i>·</i> <b>5–8 off</b> = +7–10 <i>·</i> <b>Further</b> = +8–11 <i>·</i> <b>15+ off</b> = big play <i>·</i> <b>20+ off</b> = TD'
+        : '<b>Hit it</b> = '+(S.down<=2?'INTERCEPTION':S.down===3?'SACK (−7)':'STOP')+' <i>·</i> <b>'+(lossR()>1?'Within 2':'One away')+'</b> = loss <i>·</i> <b>Within 4</b> = +5–7 <i>·</i> <b>5–8 off</b> = +7–10 <i>·</i> <b>Further</b> = +9–12 <i>·</i> <b>15+ off</b> = big play <i>·</i> <b>20+ off</b> = TD'
         : go4() ? '<b>Hit it</b> = first down + tile yards <i>·</i> <b>1 away</b> = +3 <i>·</i> <b>2 away</b> = +2 <i>·</i> <b>3 away</b> = +1 <i>·</i> <b>Else</b> = turnover'
         : '<b>Hit it</b> = yards on the tile <i>·</i> <b>Within 2</b> = +'+Math.round(6*shrink())+' <i>·</i> <b>Within 5</b> = +'+Math.max(1,Math.round(2*shrink()))+' <i>·</i> <b>15+ off</b> = loss'+(shrink()<1?' <i>·</i> <b>Few left</b> = smaller near misses':'');
       $('bBack4').hidden=!go4(); $('gLeft').hidden=go4(); $('bBack4').textContent='← PUNT / KICK';
