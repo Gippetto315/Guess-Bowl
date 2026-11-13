@@ -920,6 +920,9 @@ function closeRules(){ $('howto').hidden=true; if(hForced){ SAVE.rulesSeen=1; pe
 // Bailing on a season or playoff game is a forfeit: it goes down as a loss (0–2, or the real score if you were already losing).
 let qGo=null;
 function forfeit(){ if(!S||S.over||S.done) return; if(S.kind!=='quick'){ if(S.you>=S.cpu){ S.you=0; S.cpu=2; } S.over=true; recordGame(); } S.done=true; persist(); }
+// Home or road: season games alternate week to week, the better playoff seed hosts, quick games are a coin flip.
+function homeGame(kind,o){ if(kind==='season') return SE().results.length%2===0;
+  if(kind==='playoff'){ const a=seedOf(0), b=seedOf(o); return !b||a<=b; } return rf()<.5; }
 function newGame(kind,oppIdx,ok){
   const live=S&&!S.done&&!S.over;
   if(live&&!ok){
@@ -934,9 +937,9 @@ function newGame(kind,oppIdx,ok){
   // Wipe anything left over from the last game (FINAL, last score) so the new game starts clean.
   fq.length=0; clearTimeout(fT); fBusy=false; fCur=null; $('flash').className='flash';
   const O=TM(oppIdx);
-  S={kind,oppIdx,oppName:O.name,opp:O.short,wx:pickWx(),st:blankGame(),pf:[],you:0,cpu:0,dYou:0,dCpu:0,q:1,left:PLAYS,over:false,phase:null,mode:null,theme:rf()<.5?'day':'night'};
+  S={kind,oppIdx,oppName:O.name,opp:O.short,wx:pickWx(),st:blankGame(),pf:[],you:0,cpu:0,dYou:0,dCpu:0,q:1,left:PLAYS,over:false,phase:null,mode:null,theme:rf()<.5?'day':'night',home:homeGame(kind,oppIdx)};
   setKick('cpu'); animY=65;
-  setBanner(null,THEMES[S.theme].name+(WX[S.wx].name?' · '+WX[S.wx].name:''),'They kick it off to you. '+WX[S.wx].tip);
+  setBanner(null,THEMES[S.theme].name+(WX[S.wx].name?' · '+WX[S.wx].name:''),(S.home?'Home game. The crowd is yours. ':'Road game. Hostile crowd. ')+'They kick it off to you. '+WX[S.wx].tip);
   prompt([]); render(); showTab('play');
 }
 
@@ -1155,7 +1158,7 @@ function pointAfter(n){
 // Your kickoff is a guess too: the closer you are, the deeper you pin them. Way off = a big return.
 function kickDeep(n){
   const d=Math.abs(n-S.fg), notes=[]; let ny, title;
-  if(d===0){ ny=100-ri(8,14); title='PINNED DEEP!'; }
+  if(d===0){ ny=100-ri(1,5); title='PINNED DEEP!'; S.pf.push(['PINNED!','Their own '+(100-ny),'gold']); }
   else if(d<=2){ ny=100-ri(16,22); title='GREAT COVERAGE'; }
   else if(d<=5){ ny=75; title='TOUCHBACK'; }
   else if(d<=14){ ny=100-ri(25,32); title='RETURNED'; }
@@ -1179,10 +1182,12 @@ function kickReturn(n){
   S.needKick=null;
   if(d===0){ title='TAKE IT TO THE HOUSE!'; S.st.rettd=(S.st.rettd||0)+1; notes.push('Kick return touchdown!'); youTD(notes,'ret'); S.kick=null;
     tick(notes); prompt(notes); setBanner(S.ret,title,notes.join(' ')); animate(land,S.y); render(); return; }
-  if(d<=2){ ny=ri(40,50); title='GREAT RETURN'; } else if(d<=5){ ny=ri(32,38); title='NICE RETURN'; }
+  // Their kicker nails it 1 time in 25, same odds as your exact hit: you're pinned at your own 1-5.
+  if(rf()<.04){ ny=ri(1,5); title='PINNED DEEP'; S.pf.push(['PINNED','Your own '+ny,'cpu']); }
+  else if(d<=2){ ny=ri(40,50); title='GREAT RETURN'; } else if(d<=5){ ny=ri(32,38); title='NICE RETURN'; }
   else if(d<=14){ ny=land<=0?25:ri(25,30); title=land<=0?'TOUCHBACK':'SOLID RETURN'; } else { ny=ri(18,24); title='TACKLED EARLY'; }
   youBall(ny); notes.push('Your ball at '+fmt(ny)+'.');
-  S.kick={type:'punt',from:65,to:land,poss:'cpu'};
+  S.kick={type:'punt',from:65,to:title==='PINNED DEEP'?ny:land,poss:'cpu'};
   tick(notes); prompt(notes); setBanner(S.ret,title,notes.join(' ')); animate(65,S.y); render();
 }
 
@@ -1222,6 +1227,7 @@ const sfx={
   whistle:(len)=>{ len=len||.35; const c=audio(); if(!c||!soundOn()||c.state!=='running') return; const t=c.currentTime, o=c.createOscillator(), lfo=c.createOscillator(), lg=c.createGain(), g=c.createGain();
     o.type='sine'; o.frequency.value=2900; lfo.frequency.value=38; lg.gain.value=130; lfo.connect(lg); lg.connect(o.frequency); env(g,t,.02,.1,len); o.connect(g); g.connect(SND.master); o.start(t); lfo.start(t); o.stop(t+len+.05); lfo.stop(t+len+.05); },
   cheer:(k)=>{ k=k||1; nz(1.4*k+.5,.16*k,1100,.6,0,.25); nz(1.1*k+.4,.09*k,2500,.8,.06,.3); },
+  boo:(k)=>{ k=k||1; nz(2.2*k+.4,.2*k,300,1.4,0,.35); nz(2*k+.3,.12*k,520,1.8,.08,.4); osc('sawtooth',140,1.8*k,.012,.05,120); },
   groan:()=>{ nz(1.1,.13,420,.8,0,.15); osc('sawtooth',180,.9,.025,0,110); },
   chime:()=>{ osc('sine',880,.25,.11); osc('sine',1320,.35,.09,.09); },
   // Full stadium roar: layered crowd noise that swells and holds for a few seconds.
@@ -1238,6 +1244,10 @@ document.addEventListener('pointerdown',()=>{ const c=audio(); if(c&&c.state==='
 const GOOD=['HOUSE CALL!','BIG PLAY!','NICE GAIN','MOVED THE CHAINS','PICKED OFF!','SACK!','STOPPED!','IT\'S GOOD!'];
 // Kicks: hold the result until the ball actually gets there. Show "KICK IS UP" while it flies.
 let bnPend=null, bnTok=0;
+// Crowd reacts by who's home: home fans cheer their team and boo the visitors; a road crowd does the opposite to you.
+function fans(goodFor,lvl){ const home=S&&S.home===false?'cpu':'you';
+  if(goodFor===home){ if(lvl==='td'){ sfx.horn(); sfx.roar(); } else sfx.cheer(lvl==='score'?.9:.8); }
+  else if(lvl==='td'){ sfx.boo(1); sfx.cheer(.3); } else if(lvl==='score') sfx.boo(.8); else sfx.groan(); }
 function setBanner(n,t,sub){
   bnTok++;
   if(S&&S.kick&&!matchMedia('(prefers-reduced-motion: reduce)').matches){ bnPend=[n,t,sub,bnTok]; showBanner(n,'KICK IS UP…',''); return; }
@@ -1248,7 +1258,7 @@ function showBanner(n,t,sub){
   const bad = t==='NO GOOD' || /They score|They kick a field goal|Turnover on downs\. It was/.test(sub);
   const tone = n==null&&!bad ? 'idle' : /^(HIGHER|LOWER)/.test(t) ? (bad?'bad':'hint') : GOOD.includes(t) ? 'good' : bad ? 'bad' : '';
   const c=$('call'); c.className='call '+tone; void c.offsetWidth; c.classList.add('pop');
-  if(tone==='good') sfx.cheer(.7); else if(tone==='bad') sfx.groan(); else if(tone==='hint') sfx.miss();
+  if(tone==='good') fans('you','play'); else if(tone==='bad') fans('cpu','play'); else if(tone==='hint') sfx.miss();
 }
 
 let gridMax=0;
@@ -1288,8 +1298,8 @@ function render(){
       fg:   ['KICK IT · '+(117-S.y)+' YDS', 'Land '+tolTxt(fgT(117-S.y)), '<b>Close enough</b> = 3 points <i>·</i> <b>One hidden number</b> = BLOCKED'],
       xp:   ['EXTRA POINT', 'Land within ±11', '<b>Close enough</b> = +1 <i>·</i> <b>One hidden number</b> = BLOCKED'],
       two:  ['GO FOR 2', 'Within ±5', '<b>Within 5</b> = +2 <i>·</i> <b>Miss</b> = no points'],
-      ret:  ['KICK RETURN', 'One guess', '<b>Exact</b> = return TD <i>·</i> <b>Within 2</b> = near midfield <i>·</i> <b>Within 5</b> = your 35 <i>·</i> <b>15+ off</b> = stuffed early'],
-      ko:   ['KICKOFF', 'One guess', '<b>Exact</b> = pinned at their 10 <i>·</i> <b>Within 5</b> = touchback <i>·</i> <b>15+ off</b> = big return'],
+      ret:  ['KICK RETURN', 'One guess', '<b>Exact</b> = return TD <i>·</i> <b>Within 2</b> = near midfield <i>·</i> <b>Within 5</b> = your 35 <i>·</i> <b>15+ off</b> = stuffed early <i>·</i> <b>Their kicker nails it</b> (1 in 25) = pinned at your 1–5'],
+      ko:   ['KICKOFF', 'One guess', '<b>Exact</b> = pinned at their 1–5 <i>·</i> <b>Within 5</b> = touchback <i>·</i> <b>15+ off</b> = big return'],
       blk:  ['BLOCK THE KICK', 'One guess', '<b>Exact</b> = BLOCKED <i>·</i> <b>Miss</b> = they almost always make it'],
       stop2:['STOP THE 2', 'Within ±6', '<b>Within 6</b> = stopped <i>·</i> <b>Miss</b> = they get 2'],
       onside:['ONSIDE KICK', 'Within ±2', '<b>Within 2</b> = you recover <i>·</i> <b>Miss</b> = their ball near midfield']};
@@ -1961,15 +1971,15 @@ function nextFlash(){
   const el=$('flash'); $('fw').textContent=it[0]; $('fs2').textContent=it[1];
   const lng=it[0]==='SCOUTED!', pf=it[2]==='perf'; el.className='flash f-'+it[2]+(it[3]?' big':'')+(lng?' long':'')+(pf?' perf'+(/DOUBLE|TRIPLE|×/.test(it[0])?' dbl':''):''); void el.offsetWidth; el.classList.add('show'); if(it[3]) it[3]();
   const w=it[0];
-  if(pf){ sfx.chime(); setTimeout(()=>sfx.chime(),140); sfx.cheer(.7); }
-  else if(/TOUCHDOWN!|RETURN TD/.test(w)){ sfx.horn(); sfx.roar(); }
-  else if(w==='TOUCHDOWN'&&it[2]==='cpu') sfx.groan();
-  else if(w==='FIRST DOWN!'){ sfx.chime(); sfx.cheer(.9); }
+  if(pf){ sfx.chime(); setTimeout(()=>sfx.chime(),140); sfx.cheer(S.home===false?.35:.7); }
+  else if(/TOUCHDOWN!|RETURN TD/.test(w)) fans('you','td');
+  else if(w==='TOUCHDOWN'&&it[2]==='cpu') fans('cpu','td');
+  else if(w==='FIRST DOWN!'){ sfx.chime(); fans('you','play'); }
   else if(['OFFENSE','DEFENSE','KICKOFF','OVERTIME'].includes(w)) sfx.whistle();
   else if(w==='FINAL'||w==='HALFTIME'){ sfx.whistle(.9); if(w==='HALFTIME') sfx.cheer(.6); }
-  else if(it[2]==='gold'&&/FIELD GOAL|EXTRA POINT|2-POINT/.test(w)) sfx.cheer(.8);
-  else if(/^(SACK!|INTERCEPTION!|STUFFED!)$/.test(w)){ sfx.cheer(1); sfx.whistle(); }
-  else if(/SACKED|TACKLE FOR LOSS|BIG PLAY/.test(w)) sfx.groan();
+  else if(/FIELD GOAL|IT'S GOOD|EXTRA POINT|2-POINT|SAFETY/.test(w)) fans(it[2]==='cpu'?'cpu':'you','score');
+  else if(/^(SACK!|INTERCEPTION!|STUFFED!)$/.test(w)){ fans('you','play'); sfx.whistle(); }
+  else if(/SACKED|TACKLE FOR LOSS|BIG PLAY/.test(w)) fans(it[2]==='gold'?'you':'cpu','play');
   fT=setTimeout(nextFlash,it[3]?2550:lng?3000:pf?2000:1900);
 }
 function flashCheck(){ fGen++;
@@ -1998,7 +2008,7 @@ const THEMES={
 };
 const CROWD_COLS=['#3f86f5','#e8483d','#f2f2f2','#ffd23f','#2b2b2b','#3f86f5','#e8483d','#8fa596'];
 const crowd=[]; (function(){ let seed=7; const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
-  for(let r=0;r<3;r++) for(let u=-12;u<132;u+=0.75+rnd()*.4) crowd.push({u,r,c:CROWD_COLS[Math.floor(rnd()*CROWD_COLS.length)],p:rnd()*6.28}); })();
+  for(let r=0;r<3;r++) for(let u=-12;u<132;u+=0.75+rnd()*.4) { const f=rnd(); crowd.push({u,r,c:CROWD_COLS[Math.floor(rnd()*CROWD_COLS.length)],p:rnd()*6.28,k:f<.12?0:(u>=96&&u<116)||f>.95?2:1}); } })();
 
 let anim=null, confetti=[], enterK=1;
 const runDur=(a,b)=>Math.min(3400,1300+Math.abs(b-a)*55);
@@ -2056,10 +2066,11 @@ function draw(by,t){
   [[0,1],[bot,-1]].forEach(([y0,s])=>{
     x.fillStyle=T.stand; x.fillRect(0,y0,W,CH);
     for(let r=0;r<3;r++){ x.fillStyle=r%2?T.step:T.stand; x.fillRect(0,y0+(s>0?r*11:CH-(r+1)*11),W,11); }
+    const hj=USER_COLORS[(SAVE.team&&SAVE.team.color)||0]||v('--you'), aj=v('--cpu'), homeC=S.home===false?aj:hj, awayC=S.home===false?hj:aj;
     crowd.forEach(p=>{ const px=X(p.u); if(px<-6||px>W+6) return;
       const ry = s>0 ? y0+6+p.r*10 : y0+CH-6-p.r*10;
       const bob=Math.sin(t*.004+p.p)*1.2;
-      x.fillStyle=p.c; x.beginPath(); x.ellipse(px,ry+3,3.6,2.4,0,0,7); x.fill();
+      x.fillStyle=p.k===1?homeC:p.k===2?awayC:p.c; x.beginPath(); x.ellipse(px,ry+3,3.6,2.4,0,0,7); x.fill();
       x.fillStyle=S.theme==='day'?'#e7c3a0':'#8f7a66'; x.beginPath(); x.arc(px,ry-1+bob,2.1,0,7); x.fill();
       if(T.tint && Math.sin(t*.0017+p.p*40)>.995){ x.fillStyle='#fff'; x.beginPath(); x.arc(px,ry-1,2.6,0,7); x.fill(); }
     });
