@@ -2082,6 +2082,9 @@ function draw(by,t){
 
   // grass
   x.save(); x.beginPath(); x.rect(0,top,W,bot-top); x.clip();
+  // turf apron and padded wall behind each end zone (seen when a kick sails through)
+  x.fillStyle=T.g2; x.fillRect(0,top,W,bot-top); x.fillStyle='rgba(0,0,0,.18)'; x.fillRect(0,top,W,bot-top);
+  [[-9,-20],[129,140]].forEach(([a,b])=>{ const xa=Math.min(X(a),X(b)), w=Math.abs(X(b)-X(a)); x.fillStyle=T.stand; x.fillRect(xa,top,w,bot-top); x.fillStyle=T.ezYou; x.fillRect(a<0?X(a)-ppx*.9:X(a),top,ppx*.9,bot-top); });
   for(let y=0;y<100;y+=5){ x.fillStyle=(y/5)%2?T.g1:T.g2; x.fillRect(xy(y+5),top,5*ppx+1,bot-top); }
   // end zones with diagonal stripes
   [[0,T.ezCpu,S.opp,-1],[110,T.ezYou,ME(),1]].forEach(([u,col,txt,rot])=>{
