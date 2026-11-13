@@ -2116,7 +2116,8 @@ function draw(by,t){
   const entering=leg&&leg.enter;
   // Final whistle. Win: your guys brawl the other team (cartoon dust-up), leave them seeing stars, then dance.
   // Lose: your guys turn on each other while the winners dance.
-  const youCol=myJ, endMode=S.over&&!leg&&S.you!==S.cpu?(S.you>S.cpu?'win':'lose'):null, pairs=new Map(), clouds=[];
+  // The party waits until the last banner (FINAL) is gone, so nothing covers it.
+  const youCol=myJ, endMode=S.over&&!leg&&(S.endT||!fBusy)&&S.you!==S.cpu?(S.you>S.cpu?'win':'lose'):null, pairs=new Map(), clouds=[];
   if(endMode&&!S.endT) S.endT=t;
   const brawl=endMode==='win'&&t-S.endT<3600, ko=endMode==='win'&&!brawl;
   if(endMode==='lose'){ const mine=list.filter(p=>p.col===youCol); for(let k=0;k+1<mine.length;k+=2){ pairs.set(mine[k],[mine[k+1],k/2,-1]); pairs.set(mine[k+1],[mine[k],k/2,1]); } }
