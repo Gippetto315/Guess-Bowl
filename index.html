@@ -877,7 +877,7 @@ function cpuPAT(n){ const notes=[], d=Math.abs(n-S.fg); let title;
     if(stop){ title='STOPPED!'; S.pf.push(['2-POINT STOP','No good','gold']); notes.push('You read it. Two-point try fails.'); }
     else { S.cpu+=2; S.tagCpu='two'; title='THEY CONVERT'; notes.push('Missed by '+(d-6)+'. Two-point try is good.'); } }
   else { const blocked=d===0, ok=!blocked&&rf()<.97;
-    S.kick={type:'fg',from:2,to:blocked?-1:-10,lat:ok||blocked?0:(rf()<.5?-4.6:4.6),poss:'cpu'};
+    S.kick={type:'fg',from:2,to:blocked?-1:-10,lat:ok||blocked?0:missRnd(),poss:'cpu'};
     if(blocked){ S.st.take++; title='BLOCKED!'; S.pf.push(['BLOCKED!','You got a hand on it','gold']); notes.push('You timed the snap. Kick blocked!'); }
     else if(ok){ S.cpu+=1; S.tagCpu='xp'; title='EXTRA POINT GOOD'; notes.push('It was '+S.fg+'. Kick is good.'); }
     else { title='NO GOOD!'; notes.push('Doinked it. Extra point misses!'); } }
@@ -1077,11 +1077,14 @@ const go4=()=>S.mode==='off'&&S.down===4&&S.goFor&&S.phase==='guess';
 function shrink(){ const r=S.ser; if(!r) return 1; const left=r.hi-r.lo+1; return left>=9?1:left>=6?.85:left>=4?.65:.5; }
 function tileY(n){ return go4() ? S.togo+Math.round(2+Math.abs(n-13)/12*13) : yds(n); }
 
+// Missed kicks go wide on the side you were off, farther the more you missed by (stays inside the camera: uprights are at 3.1, view edge ~8).
+const missLat=(sgn,off)=>sgn*Math.min(7.4,4.2+Math.max(0,off-1)*.55);
+const missRnd=()=>missLat(rf()<.5?-1:1,1+ri(0,5));
 function kick(n){
   const from=S.y, k=117-S.y, tol=fgT(k), d=Math.abs(n-S.fg), notes=[]; S.fgDist=k;
   let title;
   const blocked=n===S.block, good=!blocked&&d<=tol; S.st.fga++; if(good) S.st.fgm++;
-  S.kick= blocked ? {type:'fg',from,to:from+4,lat:2,poss:'you'} : {type:'fg',from,to:110,lat:good?0:(rf()<.5?-4.6:4.6),poss:'you'};
+  S.kick= blocked ? {type:'fg',from,to:from+4,lat:2,poss:'you'} : {type:'fg',from,to:110,lat:good?0:missLat(n<S.fg?-1:1,d-tol),poss:'you'};
   if(blocked){ title='BLOCKED!'; notes.push(n+' was the block number. Their ball.'); S.pf.push(['BLOCKED!',k+'-yard try · They got a hand on it','cpu']); cpuBall(S.y); }
   else if(good){ title='IT\'S GOOD!'; S.you+=3; S.tagYou='fg'; S.st.lfg=Math.max(S.st.lfg||0,k); notes.push(k+'-yarder. +3'); setKick('you'); }
   else { title='NO GOOD'; notes.push('Missed by '+(d-tol)+'. Their ball.'); S.pf.push(['NO GOOD',k+' yards · Wide '+(S.kick.lat<0?'left':'right'),'cpu']); cpuBall(S.y); }
@@ -1108,7 +1111,7 @@ function cpuPunt(notes){
 }
 function cpuFG(notes){
   const good=rf()<.8; S.fgDist=S.y+17;
-  S.kick={type:'fg',from:S.y,to:-10,lat:good?0:(rf()<.5?-4.6:4.6),poss:'cpu'};
+  S.kick={type:'fg',from:S.y,to:-10,lat:good?0:missRnd(),poss:'cpu'};
   if(good){ S.cpu+=3; S.tagCpu='fg'; setKick('cpu'); notes.push('They kick a field goal. +3'); }
   else { S.pf.push(['NO GOOD',S.fgDist+' yards · Their kick misses!','you']); youBall(S.y); notes.push('Their field goal misses!'); }
   tick(notes); prompt(notes);
@@ -1149,7 +1152,7 @@ function pointAfter(n){
     if(ok){ S.you+=2; S.tagYou='two'; S.st.twoM=(S.st.twoM||0)+1; title='2-POINT GOOD!'; notes.push('Two-point conversion. +2'); }
     else { title='STOPPED SHORT'; notes.push('Two-point try fails. Missed by '+(d-5)+'.'); } }
   else { S.st.xpa=(S.st.xpa||0)+1; const blocked=n===S.block, ok=!blocked&&d<=11;
-    S.kick= blocked?{type:'fg',from:98,to:101,lat:1,poss:'you'}:{type:'fg',from:98,to:110,lat:ok?0:(rf()<.5?-4.6:4.6),poss:'you'};
+    S.kick= blocked?{type:'fg',from:98,to:101,lat:1,poss:'you'}:{type:'fg',from:98,to:110,lat:ok?0:missRnd(),poss:'you'};
     if(ok){ S.you+=1; S.tagYou='xp'; S.st.xpm=(S.st.xpm||0)+1; title='EXTRA POINT'; notes.push('Good. +1'); }
     else { title=blocked?'BLOCKED!':'NO GOOD'; notes.push(blocked?'Extra point blocked.':'Extra point missed.'); } }
   S.pat=false; setKick('you'); prompt(notes);
