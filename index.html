@@ -363,6 +363,8 @@ button.link{background:none;border:none;box-shadow:none;padding:0;font-family:va
 .stat .v{font-family:var(--display);font-weight:800;font-style:italic;font-size:30px;line-height:1.05;font-variant-numeric:tabular-nums}
 .stat .k{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-top:2px}
 .stat.wide{grid-column:1 / -1}
+.call{transition:opacity .15s}
+body.moving .call,body.moving .flash{opacity:0!important;visibility:hidden} /* no banner while anyone is moving */
 .flash{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;opacity:0}
 .flash .fb{--t:var(--fg);min-width:72%;padding:10px 28px 8px;background:rgba(8,14,10,.84);border-top:3px solid var(--t);border-bottom:3px solid var(--t);transform:skewX(-10deg);text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.45)}
 .flash .fw{font-family:var(--display);font-weight:800;font-style:italic;font-size:46px;line-height:1;color:var(--t);letter-spacing:.02em}
@@ -1975,6 +1977,7 @@ function bump(id,key,val,plus){ S[key]=val; const el=$(id); el.textContent=val; 
   const f=document.createElement('span'); f.className='plus'; f.textContent='+'+plus; el.parentNode.appendChild(f); setTimeout(()=>f.remove(),1400); }
 function nextFlash(){
   const it=fq.shift(); fCur=it||null; if(!it){ fBusy=false; return; }
+  if(anim){ fq.unshift(it); fCur=null; fT=setTimeout(nextFlash,120); return; } // banners wait until the players stop
   const el=$('flash'); $('fw').textContent=it[0]; $('fs2').textContent=it[1];
   const lng=false, pf=it[2]==='perf'; el.className='flash f-'+it[2]+(it[3]?' big':'')+(lng?' long':'')+(pf?' perf'+(/DOUBLE|TRIPLE|×/.test(it[0])?' dbl':''):''); void el.offsetWidth; el.classList.add('show'); if(it[3]) it[3]();
   const w=it[0];
@@ -2176,6 +2179,7 @@ function mkPlay(L,dir){
   return {type,G,pose,ball,cam:k=>camU(k)*ez(k/.35),flight:k=>loose(k)?looseBall(k):inFlight(k)?flight(k).concat([(k-tR)/(tc-tR),air]):null,tc:fum?tf:tc};
 }
 function loop(t){
+  { const mv=!!anim; if(mv!==loop.mv){ loop.mv=mv; document.body.classList.toggle('moving',mv); } }
   if(anim){ const L=anim.legs[anim.i], k=Math.min(1,(t-anim.t0)/L.dur), e=L.linear?k:1-Math.pow(1-k,3);
     if(L.play){ if(!L.pl) L.pl=mkPlay(L,(L.poss||S.poss)==='you'?1:-1); animY=L.a+((L.poss||S.poss)==='you'?1:-1)*L.pl.cam(k); moving=false; }
     else { animY=L.a+(L.b-L.a)*e; moving=k<1 && (L.a!==L.b || !!L.enter); } enterK=L.enter?k:1;
