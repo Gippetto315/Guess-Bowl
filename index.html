@@ -2046,9 +2046,9 @@ function animate(a,b){
     return;
   }
   { // Turnovers: show the throw being picked off (or the ball coming out), with the team that had the ball still shown as the offense.
-    const fx=fx0, d0=playDur(a,b), d=fx==='int'?Math.max(5600,d0):d0, o=S.poss==='you'?'cpu':'you';
+    const fx=fx0, d0=playDur(a,b), d=fx==='int'?Math.max(5600,d0):fx==='fum'?Math.max(4600,d0):d0, o=S.poss==='you'?'cpu':'you';
     const lg=fx?{a,b,dur:d,play:1,fx,poss:o,pre:1}:{a,b,dur:d,play:1};
-    if(fx==='int'){ lg.pl=mkPlay(lg,o==='you'?1:-1); flashDelay=Math.round(d*lg.pl.tc); }
+    if(fx==='int'||fx==='fum'){ lg.pl=mkPlay(lg,o==='you'?1:-1); flashDelay=Math.round(d*lg.pl.tc); }
     anim={i:0,t0:performance.now(),legs:[lg]}; }
 }
 
@@ -2060,7 +2060,7 @@ const PS=.12, PT=.88;
 const ez=w=>w<=0?0:w>=1?1:w*w*(3-2*w), lin=w=>w<=0?0:w>=1?1:w, mx=(a,b,w)=>a+(b-a)*w;
 const playDur=(a,b)=>Math.min(8000,Math.max(2600,1500+Math.abs(b-a)*115));
 function mkPlay(L,dir){
-  const G=dir*(L.b-L.a), td=!!L.td, th=.30, int=L.fx==='int', tk=td?1:int?.95:PT, r=rf, D=L.dur/1000;
+  const G=dir*(L.b-L.a), td=!!L.td, th=.30, int=L.fx==='int', fum=L.fx==='fum', tf=.58, tk=td?1:(int||fum)?.95:PT, r=rf, D=L.dur/1000;
   const type=int?'int':G<=-4?'sack':G<0?'tfl':G>=7?(r()<.62?'pass':'run'):G>=3?(r()<.3?'pass':'run'):'run';
   const isRun=type==='run'||type==='tfl', passy=type==='pass'||int;
   const sg=r()<.5?-1:1, gap=sg*(.7+r()*1.6), ti=7+ri(0,2), icp=ti===7?6:ti===8?7:9;
@@ -2082,17 +2082,22 @@ function mkPlay(L,dir){
   const flight=k=>{ const q=qb(tR), c=int?catchSpot():rec(ti,tc), w=ez((k-tR)/(tc-tR)); return [mx(q[0],c[0],w),mx(q[1],c[1],w)]; };
   // interception: the defender jumps the route, then returns it the other way
   const ret=k=>{ const w=lin((k-tc)/(tk-tc)), c=catchSpot(); return [mx(c[0],G,ez(w)*.6+w*.4),c[1]+Math.sin(w*5)*.9*(1-.3*w)]; };
-  const carr=k=>{
+  const carr0=k=>{
     if(isRun){ if(k<th){ const w=ez((k-PS)/(th-PS)); return [mx(-6,-3.4,w),mx(1,.4,w)]; }
       const w=lin((k-th)/(tk-th)), e=ez(w)*.6+w*.4; return [mx(-3.4,G,e),mx(.4,gap,ez(Math.min(1,w*2.2)))+(w>.45?Math.sin(w*7)*.35*(1-w):0)]; }
     if(type==='sack'||k<tR) return qb(k);
     if(k<tc) return flight(k);
     return int?ret(k):rec(ti,k); };
+  const carr=k=>carr0(fum?Math.min(k,tf):k);
+  // fumble: the ball pops out at the hit, bounces three times along the turf and comes to rest
+  const loose=k=>fum&&k>=tf, lb0=()=>carr0(tf), lbSp=Math.sign(gap)||1;
+  const looseBall=k=>{ const q=lb0(), w=lin((k-tf)/(tk-.2-tf)), hop=Math.min(2,Math.floor(w*3)), hw=w*3-hop, e=[0,.5,.8,1];
+    const f=(x)=>mx(e[hop],e[hop+1],x); return [q[0]+4*f(hw),q[1]+lbSp*1.6*f(hw),hw>=1?1:hw,0,[1.7,.9,.35][Math.min(hop,2)]]; };
   const inFlight=k=>passy&&k>=tR&&k<tc;
-  const ball=k=>inFlight(k)?flight(k):carr(k);
-  const tgtPos=k=>inFlight(k)?rec(ti,k):carr(k); // what defenders chase: the receiver, not the ball in the air
+  const ball=k=>loose(k)?looseBall(k):inFlight(k)?flight(k):carr(k);
+  const tgtPos=k=>loose(k)?looseBall(Math.min(k,tk-.2)):inFlight(k)?rec(ti,k):carr(k); // what defenders chase: the receiver, not the ball in the air
   const camU=k=>passy&&k>=tR&&k<tc+.15?mx(qb(tR)[0],tgtPos(k)[0],ez((k-tR)/(tc+.15-tR))):ball(k)[0];
-  const holder=k=>isRun?(k<th?5:6):type==='sack'?5:(k<tR?5:k<tc?-1:int?-2:ti);
+  const holder=k=>fum&&k>=tf?-1:isRun?(k<th?5:6):type==='sack'?5:(k<tR?5:k<tc?-1:int?-2:ti);
   const last=int?-1:isRun?6:type==='sack'?5:ti;
   const OFFU=[.5,-.4,.35,-.5,.6,-.3,.45,-.6,.3,-.4], OFFL=[.6,-.6,.5,-.5,.7,-.7,.55,-.55,.65,-.65];
   // speed-limited chase: starts from where you were when you reacted, runs at no more than `cap` yards per play-second
@@ -2101,12 +2106,12 @@ function mkPlay(L,dir){
   // Who makes the tackle: the defenders best placed to reach the spot. Everyone else trails behind or gets shed, so nobody runs
   // shoulder to shoulder with the ball carrier. Long gains: a single player runs him down, or nobody does and he is clear.
   const tacklers=new Set();
-  { const nT=td?0:int?1:G<=6?3:G<=12?2:1, spot=int?ret(tk-.05):carr(tk-.05), cand=[];
+  { const nT=td?0:(int||fum)?1:G<=6?3:G<=12?2:1, spot=int?ret(tk-.05):fum?looseBall(tk):carr(tk-.05), cand=[];
     if(nT){ if(int){ for(let i=5;i<10;i++) cand.push([100+i,Math.hypot(PO[i][0]-spot[0],PO[i][1]-spot[1])]); }
       else for(let i=G>5?4:0;i<10;i++) cand.push([i,Math.hypot(PD[i][0]-spot[0],PD[i][1]-spot[1])]);
       cand.sort((x,y)=>x[1]-y[1]); cand.slice(0,nT).forEach(c=>tacklers.add(c[0])); } }
   const chaseFor=(off,i,b0,kk,rt,cap)=>{
-    const c=tgtPos(kk), spot=int?ret(tk-.05):carr(tk-.05);
+    const c=tgtPos(kk), spot=int?ret(tk-.05):fum?looseBall(tk):carr(tk-.05);
     if(tacklers.has(off?100+i:i)){ const tg=[c[0]+OFFU[i]*.6,c[1]+OFFL[i]*.6], d=Math.hypot(spot[0]-b0[0],spot[1]-b0[1]), x=tk-.05-rt, need=d/Math.max(.05,x<.1?x*x/.2:x-.05);
       return chaseTo(b0,tg,kk,rt,Math.max(cap,Math.min(VMAX*1.5,need*1.05))); }
     let q=chaseTo(b0,[c[0]+(int?mx(-1,1,ez((kk-tc)/.12)):-1)*(1.5+(i%3)*.9),c[1]+OFFL[i]*1.5],kk,rt,cap);
@@ -2130,7 +2135,7 @@ function mkPlay(L,dir){
       if(rt>0&&k>rt){ [u,l]=chaseFor(true,i,base(rt),k,rt,VMAX*(i<5?.75:.9)); flip=true; }
       else { [u,l]=base(k); flip=int&&k>tc; }
       bl=holder(k)===i;
-      if(!td&&i===last&&k>tk-.04) fall=ez((k-(tk-.04))/.07);
+      if(!td&&i===last&&k>(fum?tf:tk-.04)) fall=ez((k-(fum?tf:tk-.04))/.07);
     } else {
       let base, rt, cap=VMAX*(i<4?.8:1);
       if(i<4){ const op=[0,1,3,4][i], edge=!isRun&&(i===0||i===3);
@@ -2163,7 +2168,7 @@ function mkPlay(L,dir){
     }
     return {u,l,mv:k>PS&&k<tk+.03,fall,ball:bl,flip};
   }
-  return {type,G,pose,ball,cam:k=>camU(k)*ez(k/.35),flight:k=>inFlight(k)?flight(k).concat([(k-tR)/(tc-tR),air]):null,tc};
+  return {type,G,pose,ball,cam:k=>camU(k)*ez(k/.35),flight:k=>loose(k)?looseBall(k):inFlight(k)?flight(k).concat([(k-tR)/(tc-tR),air]):null,tc:fum?tf:tc};
 }
 function loop(t){
   if(anim){ const L=anim.legs[anim.i], k=Math.min(1,(t-anim.t0)/L.dur), e=L.linear?k:1-Math.pow(1-k,3);
@@ -2302,7 +2307,7 @@ function draw(by,t){
     if(p.fall>0){ const fx=xy(py), fy=L(lat); x.save(); x.translate(fx,fy); x.rotate((i%2?1:-1)*Math.PI/2*p.fall); player(x,T,0,s*.15*p.fall,s,{...p,ball:false},0,0); x.restore(); return; }
     player(x,T,xy(py),L(lat)-hop,s,q,moving||q.arms||p.mv?t*.016+i:0,t*.003+i); });
   // Pass in the air: spiral with a shadow on the grass
-  { const fl=PLY&&PLY.flight(pk); if(fl){ const [fu,fl2,f,air]=fl, hgt=Math.sin(Math.PI*f)*(1.6+air*.06)*ppx, fx=xy(pby+dir*fu), fy=L(fl2);
+  { const fl=PLY&&PLY.flight(pk); if(fl){ const [fu,fl2,f,air,hh]=fl, hgt=Math.sin(Math.PI*f)*(hh!==undefined?hh:1.6+air*.06)*ppx, fx=xy(pby+dir*fu), fy=L(fl2);
     x.fillStyle='rgba(0,0,0,.35)'; x.beginPath(); x.ellipse(fx,fy,ppx*.5,ppx*.2,0,0,7); x.fill();
     const bw=ppx*1.1; x.save(); x.translate(fx,fy-s*.75-hgt); x.rotate(Math.atan2(-Math.cos(Math.PI*f)*hgt*.08,1)+(t*.03)); x.drawImage(ballImg,-bw/2,-bw*.3,bw,bw*.6); x.restore(); } }
   // Paparazzi: a couple seconds into your victory dance, the press runs out and flashbulbs pop like it's a red carpet.
