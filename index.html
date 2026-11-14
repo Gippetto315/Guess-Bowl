@@ -2046,9 +2046,10 @@ function animate(a,b){
     return;
   }
   { // Turnovers: show the throw being picked off (or the ball coming out), with the team that had the ball still shown as the offense.
-    const fx=fx0, d0=playDur(a,b), d=fx==='int'?Math.max(3600,d0):d0, o=S.poss==='you'?'cpu':'you';
-    if(fx==='int') flashDelay=Math.round(d*.52);
-    anim={i:0,t0:performance.now(),legs:[fx?{a,b,dur:d,play:1,fx,poss:o,pre:1}:{a,b,dur:d,play:1}]}; }
+    const fx=fx0, d0=playDur(a,b), d=fx==='int'?Math.max(5600,d0):d0, o=S.poss==='you'?'cpu':'you';
+    const lg=fx?{a,b,dur:d,play:1,fx,poss:o,pre:1}:{a,b,dur:d,play:1};
+    if(fx==='int'){ lg.pl=mkPlay(lg,o==='you'?1:-1); flashDelay=Math.round(d*lg.pl.tc); }
+    anim={i:0,t0:performance.now(),legs:[lg]}; }
 }
 
 // ================= Play animation =================
@@ -2057,14 +2058,14 @@ function animate(a,b){
 const PO=[[-1.2,-2.6,72],[-1.2,-1.3,65],[-1.2,0,55],[-1.2,1.3,61],[-1.2,2.6,78],[-4,0,12],[-6,1,28],[-1,-7.2,81],[-1,7.2,11],[-1.5,4.6,87]], PD=[[1.6,-2.1,94],[1.6,-.7,99],[1.6,.7,91],[1.6,2.1,97],[4.5,-3,54],[4.5,3,52],[2,-7.2,24],[2,7.2,21],[9,-4.5,33],[9,4.5,38]];
 const PS=.12, PT=.88;
 const ez=w=>w<=0?0:w>=1?1:w*w*(3-2*w), lin=w=>w<=0?0:w>=1?1:w, mx=(a,b,w)=>a+(b-a)*w;
-const playDur=(a,b)=>Math.min(6200,Math.max(2300,1500+Math.abs(b-a)*115));
+const playDur=(a,b)=>Math.min(8000,Math.max(2600,1500+Math.abs(b-a)*115));
 function mkPlay(L,dir){
-  const G=dir*(L.b-L.a), td=!!L.td, th=.30, int=L.fx==='int', tk=td?1:PT, r=rf, D=L.dur/1000;
+  const G=dir*(L.b-L.a), td=!!L.td, th=.30, int=L.fx==='int', tk=td?1:int?.95:PT, r=rf, D=L.dur/1000;
   const type=int?'int':G<=-4?'sack':G<0?'tfl':G>=7?(r()<.62?'pass':'run'):G>=3?(r()<.3?'pass':'run'):'run';
   const isRun=type==='run'||type==='tfl', passy=type==='pass'||int;
   const sg=r()<.5?-1:1, gap=sg*(.7+r()*1.6), ti=7+ri(0,2), icp=ti===7?6:ti===8?7:9;
   const air=int?7+ri(0,4):type==='pass'?Math.max(2.5,Math.min(G-.5,G*.7+1)):0;
-  const tR=PS+.26+Math.min(.1,air*.004), tc=tR+Math.min(.26,.07+air*.005);
+  const tR=PS+.26+Math.min(.1,air*.004), tc=Math.min(tk-.1,tR+(.35+(air+8.5)/22)/D); // ball travels about 22 yards a second
   const VMAX=9*D; // fastest anyone runs, in yards per whole-play (so defenders never teleport)
   const catchSpot=()=>[air+.3,PO[ti][1]*.72];
   // pass catchers and blockers (offense 7..9)
@@ -2097,6 +2098,22 @@ function mkPlay(L,dir){
   // speed-limited chase: starts from where you were when you reacted, runs at no more than `cap` yards per play-second
   const chaseTo=(b0,t,k,rt,cap)=>{ const dx=t[0]-b0[0], dy=t[1]-b0[1], d=Math.hypot(dx,dy)||1e-6, a=Math.min(1,cap*(k-rt<.1?(k-rt)*(k-rt)/.2:k-rt-.05)/d); return [b0[0]+dx*a,b0[1]+dy*a]; };
   const pu1=(kk,rushing)=>isRun?Math.max(-1.2,Math.min(1.3,G*.25))*ez((kk-PS-.05)/(tk-PS-.05)):type==='sack'?-1.6*ez((kk-PS)/.5):-.7*ez((kk-PS)/(tR-PS));
+  // Who makes the tackle: the defenders best placed to reach the spot. Everyone else trails behind or gets shed, so nobody runs
+  // shoulder to shoulder with the ball carrier. Long gains: a single player runs him down, or nobody does and he is clear.
+  const tacklers=new Set();
+  { const nT=td?0:int?1:G<=6?3:G<=12?2:1, spot=int?ret(tk-.05):carr(tk-.05), cand=[];
+    if(nT){ if(int){ for(let i=5;i<10;i++) cand.push([100+i,Math.hypot(PO[i][0]-spot[0],PO[i][1]-spot[1])]); }
+      else for(let i=G>5?4:0;i<10;i++) cand.push([i,Math.hypot(PD[i][0]-spot[0],PD[i][1]-spot[1])]);
+      cand.sort((x,y)=>x[1]-y[1]); cand.slice(0,nT).forEach(c=>tacklers.add(c[0])); } }
+  const chaseFor=(off,i,b0,kk,rt,cap)=>{
+    const c=tgtPos(kk), spot=int?ret(tk-.05):carr(tk-.05);
+    if(tacklers.has(off?100+i:i)){ const tg=[c[0]+OFFU[i]*.6,c[1]+OFFL[i]*.6], d=Math.hypot(spot[0]-b0[0],spot[1]-b0[1]), x=tk-.05-rt, need=d/Math.max(.05,x<.1?x*x/.2:x-.05);
+      return chaseTo(b0,tg,kk,rt,Math.max(cap,Math.min(VMAX*1.5,need*1.05))); }
+    let q=chaseTo(b0,[c[0]+(int?mx(-1,1,ez((kk-tc)/.12)):-1)*(1.5+(i%3)*.9),c[1]+OFFL[i]*1.5],kk,rt,cap);
+    // shed: whoever isn't making the tackle slides past on one side (the side they were already on) instead of running alongside
+    const cc=tgtPos(kk), side=(b0[1]-tgtPos(rt)[1])>=0?1:-1, sepL=1.8*ez(1-Math.abs(q[0]-cc[0])/3.4);
+    const sp=sepL*ez((kk-rt)/.12); if(side*(q[1]-cc[1])<sp) q[1]=cc[1]+side*sp;
+    return q; };
   function pose(off,i,k,t){
     const p0=(off?PO:PD)[i][0], l0=(off?PO:PD)[i][1];
     let u=p0, l=l0, fall=0, bl=false, flip=false;
@@ -2110,7 +2127,7 @@ function mkPlay(L,dir){
       else if(i===6) base=kk=>isRun?carr(kk):[mx(-6,-5.4,ez((kk-PS)/.16)),mx(1,.4,ez((kk-PS)/.16))];
       else base=kk=>rec(i,kk);
       if(int&&i!==5||int&&i===5){ rt=tc+.03+(i<5?.1:i===5?.12:0)+(i%3)*.01; }
-      if(rt>0&&k>rt){ const b0=base(rt), c=tgtPos(k); [u,l]=chaseTo(b0,[c[0]+OFFU[i],c[1]+OFFL[i]],k,rt,VMAX*(i<5?.75:.9)); flip=true; }
+      if(rt>0&&k>rt){ [u,l]=chaseFor(true,i,base(rt),k,rt,VMAX*(i<5?.75:.9)); flip=true; }
       else { [u,l]=base(k); flip=int&&k>tc; }
       bl=holder(k)===i;
       if(!td&&i===last&&k>tk-.04) fall=ez((k-(tk-.04))/.07);
@@ -2132,7 +2149,7 @@ function mkPlay(L,dir){
         if(isRun) base=kk=>[p0-.8*ez((kk-PS)/.25),l0];
         else base=kk=>[p0+1.0*ez((kk-PS)/.3),l0];
         rt=isRun?PS+.2+j*.04:type==='sack'?tk-.12:tR+.02+j*.02; cap*=1.15; }
-      const normal=kk=>{ if(kk<=rt) return base(kk); const b0=base(rt), c=tgtPos(kk); return chaseTo(b0,[c[0]+OFFU[i],c[1]+OFFL[i]],kk,rt,cap*(td?.85:1)); };
+      const normal=kk=>{ if(kk<=rt) return base(kk); return chaseFor(false,i,base(rt),kk,rt,cap*(td?.85:1)); };
       if(int&&i===icp){ // jump the route and take it back
         const a0=tR-.03;
         if(k<=a0) [u,l]=base(k);
