@@ -1720,7 +1720,7 @@ function apply(a,b,sa,sb){ const A=TM(a),B=TM(b);
   A.pf+=sa;A.pa+=sb;B.pf+=sb;B.pa+=sa;
   if(sa>sb){A.w++;B.l++;} else if(sb>sa){B.w++;A.l++;} else {A.t++;B.t++;} }
 function simScore(a,b,noTie){
-  const pts=r=>{ const v=ri(3,34)+Math.round((r-65)*.18); return Math.max(0,[0,3,6,7,10,13,14,17,20,21,23,24,27,28,30,31,34,35,38,41].reduce((p,c)=>Math.abs(c-v)<Math.abs(p-v)?c:p)); };
+  const pts=r=>{ const v=Math.round((ri(3,34)+ri(3,34))/2+(r-65)*.25); // strength matters: good teams win most weeks, like real life return Math.max(0,[0,3,6,7,10,13,14,17,20,21,23,24,27,28,30,31,34,35,38,41].reduce((p,c)=>Math.abs(c-v)<Math.abs(p-v)?c:p)); };
   let sa=pts(TM(a).rating), sb=pts(TM(b).rating);
   if(sa===sb && (noTie||rf()<.9)){ if(rf()<TM(a).rating/(TM(a).rating+TM(b).rating)) sa+=3; else sb+=3; }
   return [sa,sb];
