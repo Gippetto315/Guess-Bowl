@@ -1253,7 +1253,9 @@ function fans(goodFor,lvl){ const home=S&&S.home===false?'cpu':'you';
   else if(lvl==='td'){ sfx.boo(1); sfx.cheer(.3); } else if(lvl==='score') sfx.boo(.8); else sfx.groan(); }
 function setBanner(n,t,sub){
   bnTok++;
-  if(S&&S.kick&&!matchMedia('(prefers-reduced-motion: reduce)').matches){ bnPend=[n,t,sub,bnTok]; showBanner(n,'KICK IS UP…',''); return; }
+  if(S&&S.kick&&!matchMedia('(prefers-reduced-motion: reduce)').matches){ bnPend=[n,t,sub,bnTok]; const tk=bnTok;
+    // Say KICK IS UP only once the play before the kick (the failed 3rd-down run, say) has finished.
+    setTimeout(()=>{ const d=kickPre; kickPre=0; setTimeout(()=>{ if(bnTok===tk) showBanner(n,'KICK IS UP…',''); },d); },0); return; }
   showBanner(n,t,sub); }
 function releaseBanner(ms){ if(!bnPend) return; const p=bnPend; bnPend=null; setTimeout(()=>{ if(p[3]===bnTok) showBanner(p[0],p[1],p[2]); },ms); }
 function showBanner(n,t,sub){
@@ -2013,7 +2015,7 @@ const CROWD_COLS=['#3f86f5','#e8483d','#f2f2f2','#ffd23f','#2b2b2b','#3f86f5','#
 const crowd=[]; (function(){ let seed=7; const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
   for(let r=0;r<3;r++) for(let u=-12;u<132;u+=0.75+rnd()*.4) { const f=rnd(); crowd.push({u,r,c:CROWD_COLS[Math.floor(rnd()*CROWD_COLS.length)],p:rnd()*6.28,k:f<.12?0:(u>=96&&u<116)||f>.95?2:1}); } })();
 
-let anim=null, confetti=[], enterK=1;
+let anim=null, confetti=[], enterK=1, held=null, kickPre=0;
 const runDur=(a,b)=>Math.min(3400,1300+Math.abs(b-a)*55);
 function animate(a,b){
   const td=S.tdY, poss=S.tdPoss, kk=S.kick; S.tdY=null; S.kick=null;
@@ -2021,7 +2023,8 @@ function animate(a,b){
   if(kk){
     // Kick: (finish the play if needed), line up, ball flies, it lands, then teams reset.
     const legs=[]; let pre=0;
-    if(Math.abs(kk.from-a)>.5){ const d=runDur(a,kk.from); legs.push({a,b:kk.from,dur:d,poss:kk.poss}); pre+=d; }
+    if(Math.abs(kk.from-a)>.5){ const d=runDur(a,kk.from); legs.push({a,b:kk.from,dur:d,poss:kk.poss,pre:1}); pre+=d; }
+    kickPre=pre;
     // Field goals and extra points that reach the posts sail all the way through (or wide) and out of the stadium, Retro Bowl style.
     kk.thru=kk.type==='fg'&&(kk.to===110||kk.to===-10);
     // Flight scales with distance: a chip shot is quick and high, a 50-yarder hangs longer and just clears the bar, and nothing flies off to infinity.
@@ -2039,7 +2042,7 @@ function animate(a,b){
   if(td!=null){
     // Touchdown: run it into the end zone, celebrate, then reset for the kickoff.
     const d1=runDur(a,td); flashDelay=d1;
-    anim={i:0,t0:performance.now(),legs:[{a,b:td,dur:d1,poss},{a:td,b:td,dur:2000,poss,party:1},{a:b,b,dur:1500,enter:1}]};
+    anim={i:0,t0:performance.now(),legs:[{a,b:td,dur:d1,poss,pre:1},{a:td,b:td,dur:2000,poss,party:1},{a:b,b,dur:1500,enter:1}]};
     return;
   }
   anim={i:0,t0:performance.now(),legs:[{a,b,dur:runDur(a,b)}]};
@@ -2117,10 +2120,13 @@ function draw(by,t){
     x.fillText(n,xy(y),bot-ppx*1.4);
     x.save(); x.translate(xy(y),top+ppx*1.4); x.rotate(Math.PI); x.fillText(n,0,0); x.restore(); }
   // scrimmage + first down
-  if(!S.over && !scoring && !S.needKick && S.phase!=='pat'){
-    x.lineWidth=3; x.strokeStyle=v('--you'); x.beginPath(); x.moveTo(xy(S.y),top); x.lineTo(xy(S.y),bot); x.stroke();
-    const fd=S.y+dir*S.togo;
-    if(fd>0&&fd<100){ x.strokeStyle=v('--gold'); x.beginPath(); x.moveTo(xy(fd),top); x.lineTo(xy(fd),bot); x.stroke(); }
+  // The blue and yellow lines stay where the play started until it is over; kick flights and celebrations hide them.
+  const liveLn=!S.over && !S.needKick && S.phase!=='pat';
+  if(!anim) held=liveLn?{y:S.y,fd:S.y+(S.poss==='you'?1:-1)*S.togo}:null;
+  const ln=!anim ? held : (!S.over && held && (leg.pre||(!leg.poss&&!leg.enter))) ? held : (liveLn && leg.enter) ? {y:S.y,fd:S.y+dir*S.togo} : null;
+  if(ln){
+    x.lineWidth=3; x.strokeStyle=v('--you'); x.beginPath(); x.moveTo(xy(ln.y),top); x.lineTo(xy(ln.y),bot); x.stroke();
+    if(ln.fd>0&&ln.fd<100){ x.strokeStyle=v('--gold'); x.beginPath(); x.moveTo(xy(ln.fd),top); x.lineTo(xy(ln.fd),bot); x.stroke(); }
   }
 
   // players
