@@ -2084,7 +2084,7 @@ function mkPlay(L,dir){
   const ret=k=>{ const w=lin((k-tc)/(tk-tc)), c=catchSpot(); return [mx(c[0],G,ez(w)*.6+w*.4),c[1]+Math.sin(w*5)*.9*(1-.3*w)]; };
   const carr0=k=>{
     if(isRun){ if(k<th){ const w=ez((k-PS)/(th-PS)); return [mx(-6,-3.4,w),mx(1,.4,w)]; }
-      const w=lin((k-th)/(tk-th)), e=ez(w)*.6+w*.4; return [mx(-3.4,G,e),mx(.4,gap,ez(Math.min(1,w*2.2)))+(w>.45?Math.sin(w*7)*.35*(1-w):0)]; }
+      const w=lin((k-th)/(tk-th)), e=G>0?ez(w)*.6+w*.4:w<.62?ez(w/.62)*.62:.62+ez((w-.62)/.38)*.38; return [G>0?mx(-3.4,G,e):w<.62?mx(-3.4,.7,ez(w/.62)):mx(.7,G,ez((w-.62)/.38)),mx(.4,gap,ez(Math.min(1,w*2.2)))+(w>.45?Math.sin(w*7)*.35*(1-w):0)]; }
     if(type==='sack'||k<tR) return qb(k);
     if(k<tc) return flight(k);
     return int?ret(k):rec(ti,k); };
