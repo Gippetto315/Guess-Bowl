@@ -13,8 +13,7 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
 <link rel="manifest" href="manifest.webmanifest">
-<style>html,body{margin:0;height:100%}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box}body{font:14px system-ui,-apple-system,sans-serif}[hidden]{display:none!important}img{max-width:100%}</style>
-<title>Guess Bowl</title>
+<style>html,body{margin:0;height:100%}:root{padding-top:env(safe-area-<title>Guess Bowl</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,800;1,800&family=Barlow:wght@400;600&family=Big+Shoulders+Display:wght@800;900&display=swap">
 <style>
@@ -1258,7 +1257,8 @@ function setBanner(n,t,sub){
   if(S&&S.kick&&!matchMedia('(prefers-reduced-motion: reduce)').matches){ bnPend=[n,t,sub,bnTok]; const tk=bnTok;
     // Say KICK IS UP only once the play before the kick (the failed 3rd-down run, say) has finished.
     setTimeout(()=>{ const d=kickPre; kickPre=0; setTimeout(()=>{ if(bnTok===tk) showBanner(n,'KICK IS UP…',''); },d); },0); return; }
-  showBanner(n,t,sub); }
+  // A play result waits for the tackle (animate() releases it), so the card never covers the play. If no play follows, it shows at once.
+  bnPend=[n,t,sub,bnTok]; const tk2=bnTok; setTimeout(()=>{ if(bnPend&&bnPend[3]===tk2){ bnPend=null; showBanner(n,t,sub); } },0); }
 function releaseBanner(ms){ if(!bnPend) return; const p=bnPend; bnPend=null; setTimeout(()=>{ if(p[3]===bnTok) showBanner(p[0],p[1],p[2]); },ms); }
 function showBanner(n,t,sub){
   $('bNum').textContent=n==null?'—':n; $('bTitle').textContent=t; $('bSub').textContent=sub;
@@ -2020,7 +2020,7 @@ const crowd=[]; (function(){ let seed=7; const rnd=()=>(seed=(seed*16807)%214748
 let anim=null, confetti=[], enterK=1, held=null, kickPre=0;
 const runDur=(a,b)=>Math.min(3400,1300+Math.abs(b-a)*55); // (kept for reference; plays use playDur)
 function animate(a,b){
-  const td=S.tdY, poss=S.tdPoss, kk=S.kick, fx0=S.fx||null; S.tdY=null; S.kick=null; S.fx=null;
+  flashDelay=350; const td=S.tdY, poss=S.tdPoss, kk=S.kick, fx0=S.fx||null; S.tdY=null; S.kick=null; S.fx=null;
   if(matchMedia('(prefers-reduced-motion: reduce)').matches){ animY=b; anim=null; return; }
   if(kk){
     // Kick: (finish the play if needed), line up, ball flies, it lands, then teams reset.
@@ -2043,14 +2043,15 @@ function animate(a,b){
   }
   if(td!=null){
     // Touchdown: run it into the end zone, celebrate, then reset for the kickoff.
-    const d1=playDur(a,td); flashDelay=d1;
+    const d1=playDur(a,td); flashDelay=d1; releaseBanner(d1);
     anim={i:0,t0:performance.now(),legs:[{a,b:td,dur:d1,poss,pre:1,play:1,td:1},{a:td,b:td,dur:2000,poss,party:1},{a:b,b,dur:1500,enter:1}]};
     return;
   }
   { // Turnovers: show the throw being picked off (or the ball coming out), with the team that had the ball still shown as the offense.
     const fx=fx0, d0=playDur(a,b), d=fx==='int'?Math.max(5600,d0):fx==='fum'?Math.max(4600,d0):d0, o=S.poss==='you'?'cpu':'you';
     const lg=fx?{a,b,dur:d,play:1,fx,poss:o,pre:1}:{a,b,dur:d,play:1};
-    if(fx==='int'||fx==='fum'){ lg.pl=mkPlay(lg,o==='you'?1:-1); flashDelay=Math.round(d*lg.pl.tc); }
+    if(fx==='int'||fx==='fum'){ lg.pl=mkPlay(lg,o==='you'?1:-1); flashDelay=Math.round(d*lg.pl.tc); releaseBanner(flashDelay); }
+    if(!fx){ flashDelay=Math.round(d*.86); releaseBanner(flashDelay); } // the result banner waits for the tackle, so the whole play can be watched
     anim={i:0,t0:performance.now(),legs:[lg]}; }
 }
 
