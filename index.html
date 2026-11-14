@@ -2079,7 +2079,7 @@ function mkPlay(L,dir){
     if(isRun) return [-4-.8*ez((k-PS)/(th-PS)),0];
     if(type==='sack'){ const w=lin((k-PS)/(tk-PS)); return [mx(-4,G,ez(w)*.85+w*.15),Math.sin(k*10)*.7*w]; }
     return [mx(-4,-8.5,ez((k-PS)/(tR-PS-.02)))+Math.max(0,k-tR)*1.2,Math.sin(k*9)*.25*ez((k-PS)/.1)]; };
-  const flight=k=>{ const q=qb(tR), c=int?catchSpot():rec(ti,tc), w=ez((k-tR)/(tc-tR)); return [mx(q[0],c[0],w),mx(q[1],c[1],w)]; };
+  const flight=k=>{ const q=qb(tR), c=int?catchSpot():rec(ti,tc), w=lin((k-tR)/(tc-tR)); return [mx(q[0],c[0],w),mx(q[1],c[1],w)]; }; // constant speed once thrown
   // interception: the defender jumps the route, then returns it the other way
   const ret=k=>{ const w=lin((k-tc)/(tk-tc)), c=catchSpot(); return [mx(c[0],G,ez(w)*.6+w*.4),c[1]+Math.sin(w*5)*.9*(1-.3*w)]; };
   const carr0=k=>{
@@ -2096,7 +2096,8 @@ function mkPlay(L,dir){
   const inFlight=k=>passy&&k>=tR&&k<tc;
   const ball=k=>loose(k)?looseBall(k):inFlight(k)?flight(k):carr(k);
   const tgtPos=k=>loose(k)?looseBall(Math.min(k,tk-.2)):inFlight(k)?rec(ti,k):carr(k); // what defenders chase: the receiver, not the ball in the air
-  const camU=k=>passy&&k>=tR&&k<tc+.15?mx(qb(tR)[0],tgtPos(k)[0],ez((k-tR)/(tc+.15-tR))):ball(k)[0];
+  const camU=k=>{ if(!passy||k<tR||k>=tc+.15) return ball(k)[0]; const c0=qb(tR)[0], c1=ball(tc)[0], mid=mx(c0,c1,.6);
+    return k<tc?mx(c0,mid,lin((k-tR)/(tc-tR))):mx(mid,ball(k)[0],ez((k-tc)/.15)); }; // pan at a steady rate so the ball never seems to speed up
   const holder=k=>fum&&k>=tf?-1:isRun?(k<th?5:6):type==='sack'?5:(k<tR?5:k<tc?-1:int?-2:ti);
   const last=int?-1:isRun?6:type==='sack'?5:ti;
   const OFFU=[.5,-.4,.35,-.5,.6,-.3,.45,-.6,.3,-.4], OFFL=[.6,-.6,.5,-.5,.7,-.7,.55,-.55,.65,-.65];
