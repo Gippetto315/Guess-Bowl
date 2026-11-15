@@ -440,7 +440,8 @@ body.moving .call,body.moving .flash{opacity:0!important;visibility:hidden} /* n
 .fourth button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px 9px;font-size:19px;font-style:italic;border-radius:12px;background:linear-gradient(180deg,#1d2a52,#131d3d)}
 .fourth button small{font-style:normal;margin-top:0}
 .fourth svg{width:28px;height:28px}
-.fourth .go{border-color:var(--gold);color:var(--gold)}
+.fourth .rec{border-color:var(--gold);color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+.fourth .rec::before{content:'RECOMMENDED';font:800 8px system-ui;letter-spacing:.12em;font-style:normal;margin-top:-4px}
 .final{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 16px;text-align:center;display:flex;flex-direction:column;gap:8px}
 .final .fs{display:flex;justify-content:center;align-items:baseline;gap:16px;font-family:var(--display);font-weight:800;font-style:italic;font-size:56px;line-height:1}
 .final .res{font-family:var(--display);font-weight:800;font-style:italic;font-size:30px;color:var(--gold)}
@@ -579,7 +580,7 @@ body.moving .call,body.moving .flash{opacity:0!important;visibility:hidden} /* n
   <div class="panel" id="fourthBox" hidden>
     <div class="ghead"><span class="glabel" style="color:var(--gold)">4TH DOWN</span><span class="gleft">Your call</span></div>
     <div class="fourth">
-      <button id="bGo" class="go"><svg viewBox="0 0 34 34" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M28 17H6M14 9l-8 8 8 8"/></svg>GO FOR IT<small id="goSub"></small></button>
+      <button id="bGo"><svg viewBox="0 0 34 34" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M28 17H6M14 9l-8 8 8 8"/></svg>GO FOR IT<small id="goSub"></small></button>
       <button id="bPunt"><svg viewBox="0 0 34 34" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M29 28 Q17 -4 5 28" stroke-dasharray="2 5"/><ellipse cx="5" cy="27" rx="3.5" ry="2.4" fill="currentColor" stroke="none"/></svg>PUNT<small>Flip the field</small></button>
       <button id="bFG"><svg viewBox="0 0 34 34" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M17 31V19M8 19h18M8 19V4M26 19V4"/></svg>FIELD GOAL<small id="fgSub"></small></button>
     </div>
@@ -1329,6 +1330,9 @@ function renderNow(){
     const k=117-S.y, tol=fgT(k);
     $('goSub').textContent='D reloads · '+Math.max(9,S.ser.hi-S.ser.lo+1)+' numbers in play';
     $('bFG').disabled=tol<0; $('fgSub').textContent=tol<0?'Too far':k+' yds · '+(tol?'±'+tol:'exact');
+    // The highlighted option is the one a coach would call: short yardage goes for it, a makeable kick kicks, everything else punts.
+    const rec=S.togo<=2&&S.y>=35 ? 'bGo' : tol>=8 ? 'bFG' : (tol>=0&&S.y>=70) ? 'bFG' : (S.y>=50&&S.togo<=4) ? 'bGo' : 'bPunt';
+    ['bGo','bPunt','bFG'].forEach(id=>$(id).classList.toggle('rec',id===rec));
   }
   if(S.phase==='guess'){
     const panel=$('guessBox'), fill=$('fill'), tr=$('track');
