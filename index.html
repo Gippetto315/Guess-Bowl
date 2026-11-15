@@ -365,6 +365,7 @@ button.link{background:none;border:none;box-shadow:none;padding:0;font-family:va
 .stat .k{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-top:2px}
 .stat.wide{grid-column:1 / -1}
 .call{transition:opacity .15s}
+body.moving #guessBox,body.moving #fourthBox,body.moving #patBox,body.moving #kickBox{pointer-events:none;opacity:.45}
 body.moving .call,body.moving .flash{opacity:0!important;visibility:hidden} /* no banner while anyone is moving */
 .flash{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;opacity:0}
 .flash .fb{--t:var(--fg);min-width:72%;padding:10px 28px 8px;background:rgba(8,14,10,.84);border-top:3px solid var(--t);border-bottom:3px solid var(--t);transform:skewX(-10deg);text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.45)}
@@ -971,6 +972,7 @@ function prompt(notes){
 }
 
 function tap(n){
+  if(anim&&anim.legs.some(l=>!l.enter)) return;
   sfx.click();
   if(S.mode==='fg') return kick(n);
   if(S.mode==='punt') return puntKick(n);
@@ -1292,7 +1294,11 @@ function buildGrid(max){
   for(let i=1;i<=max;i++){ const b=document.createElement('button'); b.innerHTML=i+(max===MAX?'<small>+'+yds(i)+'</small>':''); b.style.setProperty('--e',Math.abs(i-13)/12*.65); b.id='n'+i; b.onclick=()=>tap(i); g.appendChild(b); }
 }
 
-function render(){
+// While a play is on screen the scoreboard, possession colours and the next-step buttons stay as they were,
+// so nothing (an interception, a touchdown prompt, a go-for-it box) is given away early. They catch up when the play ends.
+var rPend=0;
+function render(){ if(anim&&anim.legs.some(l=>!l.enter)){ rPend=1; return; } rPend=0; renderNow(); }
+function renderNow(){
   $('sOpp').textContent=S.opp.slice(0,3); $('sMe').textContent=ME().slice(0,3);
   if(S.logoFor!==S.oppIdx){ S.logoFor=S.oppIdx; $('lMe').innerHTML=L(TM(0)); $('lOpp').innerHTML=L(TM(S.oppIdx)); } $('sYou').textContent=S.dYou; $('sCpu').textContent=S.dCpu;
   $('sQ').textContent=S.over?(S.ot?'FINAL/OT':'FINAL'):S.q>4?'OT':'Q'+S.q; $('sLeft').textContent=S.over?'':S.left+(S.left===1?' play':' plays');
@@ -2200,7 +2206,7 @@ function loop(t){
     else { animY=L.a+(L.b-L.a)*e; moving=k<1 && (L.a!==L.b || !!L.enter); } enterK=L.enter?k:1;
     if(L.party && !L.fired){ L.fired=1; burst(L.b); }
     if(L.kick && !L.landed && !L.thud){ L.thud=1; sfx.thump(); }
-    if(k>=1){ anim.i++; anim.t0=t; if(anim.i>=anim.legs.length) anim=null; } }
+    if(k>=1){ anim.i++; anim.t0=t; if(anim.i>=anim.legs.length){ anim=null; if(rPend) render(); } } }
   if(S && !$('gameScreen').hidden) draw(animY,t);
   requestAnimationFrame(loop);
 }
