@@ -1228,23 +1228,38 @@ function osc(type,f,dur,vol,delay,f2){ const c=audio(); if(!c||!soundOn()||c.sta
   o.type=type; o.frequency.setValueAtTime(f,t); if(f2) o.frequency.exponentialRampToValueAtTime(f2,t+dur); env(g,t,.01,vol,dur); o.connect(g); g.connect(SND.master); o.start(t); o.stop(t+dur+.05); }
 function nz(dur,vol,freq,q,delay,attack,type){ const c=audio(); if(!c||!soundOn()||c.state!=='running') return; const t=c.currentTime+(delay||0), sr=c.createBufferSource(), f=c.createBiquadFilter(), g=c.createGain();
   sr.buffer=SND.noise; sr.loop=true; f.type=type||'bandpass'; f.frequency.value=freq; f.Q.value=q||1; env(g,t,attack||.02,vol,dur); sr.connect(f); f.connect(g); g.connect(SND.master); sr.start(t,Math.random()); sr.stop(t+dur+.1); }
+// Crowd = lots of detuned, vibrato'd voices run through vowel formants (not filtered hiss), plus hand claps and whoops.
+const VOW={ah:[[800,7,5],[1250,7,3.5],[2600,5,1.2]], oo:[[330,7,6],[800,6,2.5],[2400,4,.5]], aw:[[620,7,5],[1000,7,3.5],[2400,5,.8]]};
+function voices(n,dur,vol,f0,f1,fm,delay,attack){ const c=audio(); if(!c||!soundOn()||c.state!=='running') return; const t=c.currentTime+(delay||0), bus=c.createGain(), out=c.createGain();
+  fm.forEach(([fr,q,gn])=>{ const f=c.createBiquadFilter(), g=c.createGain(); f.type='bandpass'; f.frequency.value=fr; f.Q.value=q; g.gain.value=gn; bus.connect(f); f.connect(g); g.connect(out); });
+  env(out,t,attack||.2,vol,dur); out.connect(SND.master);
+  for(let i=0;i<n;i++){ const o=c.createOscillator(), v=c.createOscillator(), vg=c.createGain(), og=c.createGain(), base=f0*(.8+rf()*.6), st=t+rf()*.15;
+    o.type='sawtooth'; o.frequency.setValueAtTime(base,st); o.frequency.exponentialRampToValueAtTime(base*(f1/f0),t+dur);
+    v.frequency.value=4.5+rf()*2.5; vg.gain.value=base*.03; v.connect(vg); vg.connect(o.frequency); og.gain.value=1/Math.sqrt(n); o.connect(og); og.connect(bus);
+    o.start(st); v.start(st); o.stop(t+dur+.1); v.stop(t+dur+.1); } }
+function claps(n,span,vol,delay){ for(let i=0;i<n;i++){ const d=(delay||0)+rf()*span; nz(.05,vol*(.5+rf()*.5),1700+rf()*1800,1.2,d,.002); } }
+function whoops(n,span,vol,delay){ for(let i=0;i<n;i++){ const d=(delay||0)+rf()*span, f=480+rf()*260; voices(2,.45,vol,f,f*1.5,VOW.ah,d,.06); } }
 const sfx={
   click:()=>osc('triangle',900,.06,.07,0,600),
   miss:()=>osc('triangle',320,.14,.06,0,190),
   whistle:(len)=>{ len=len||.35; const c=audio(); if(!c||!soundOn()||c.state!=='running') return; const t=c.currentTime, o=c.createOscillator(), lfo=c.createOscillator(), lg=c.createGain(), g=c.createGain();
     o.type='sine'; o.frequency.value=2900; lfo.frequency.value=38; lg.gain.value=130; lfo.connect(lg); lg.connect(o.frequency); env(g,t,.02,.1,len); o.connect(g); g.connect(SND.master); o.start(t); lfo.start(t); o.stop(t+len+.05); lfo.stop(t+len+.05); },
-  cheer:(k)=>{ k=k||1; nz(1.4*k+.5,.16*k,1100,.6,0,.25); nz(1.1*k+.4,.09*k,2500,.8,.06,.3); },
-  boo:(k)=>{ k=k||1; nz(2.2*k+.4,.2*k,300,1.4,0,.35); nz(2*k+.3,.12*k,520,1.8,.08,.4); osc('sawtooth',140,1.8*k,.012,.05,120); },
-  groan:()=>{ nz(1.1,.13,420,.8,0,.15); osc('sawtooth',180,.9,.025,0,110); },
+  cheer:(k)=>{ k=k||1; voices(10,1.5*k+.6,.2*k,200,270,VOW.ah,0,.22); claps(Math.round(16*k),1.5*k,.05*k,.1); whoops(2,1*k,.06*k,.15); },
+  boo:(k)=>{ k=k||1; voices(12,1.9*k+.4,.22*k,175,125,VOW.oo,0,.3); voices(6,1.6*k+.3,.12*k,115,90,VOW.oo,.1,.35); },
+  groan:()=>{ voices(8,1.2,.18,240,150,VOW.aw,0,.12); },
   chime:()=>{ osc('sine',880,.25,.11); osc('sine',1320,.35,.09,.09); },
   // Full stadium roar: layered crowd noise that swells and holds for a few seconds.
-  roar:()=>{ nz(3.6,.34,950,.45,0,.35); nz(3.2,.22,1900,.6,.08,.45); nz(3,.18,420,.5,0,.3); nz(1.8,.12,3200,.9,.2,.2); },
+  roar:()=>{ voices(18,3.8,.3,190,300,VOW.ah,0,.4); voices(8,3.2,.16,300,420,VOW.ah,.15,.5); claps(46,3.4,.055,.2); whoops(5,3,.07,.2); },
   horn:()=>{ [220,277,330].forEach(f=>osc('sawtooth',f,1.1,.05)); osc('square',110,1.1,.035); },
   thump:()=>{ osc('sine',150,.18,.32,0,50); nz(.08,.18,900,1,0,.003,'lowpass'); }
 };
 function crowdAmb(on){ const c=audio();
-  if(on&&c&&soundOn()&&!SND.crowd){ const sr=c.createBufferSource(), f=c.createBiquadFilter(), g=c.createGain(); sr.buffer=SND.noise; sr.loop=true; f.type='bandpass'; f.frequency.value=700; f.Q.value=.5; g.gain.value=.03; sr.connect(f); f.connect(g); g.connect(SND.master); sr.start(); SND.crowd={sr}; }
-  else if((!on||!soundOn())&&SND.crowd){ try{ SND.crowd.sr.stop(); }catch(e){} SND.crowd=null; } }
+  if(on&&c&&soundOn()&&!SND.crowd){ const out=c.createGain(), nodes=[]; out.gain.value=.05; out.connect(SND.master);
+    VOW.ah.forEach(([fr,q,gn])=>{ const f=c.createBiquadFilter(), g=c.createGain(); f.type='bandpass'; f.frequency.value=fr; f.Q.value=q; g.gain.value=gn; f.connect(g); g.connect(out); nodes.push(f); });
+    const os=[]; for(let i=0;i<7;i++){ const o=c.createOscillator(), v=c.createOscillator(), vg=c.createGain(), og=c.createGain(), base=130+rf()*170; o.type='sawtooth'; o.frequency.value=base; v.frequency.value=.3+rf()*.8; vg.gain.value=base*.06; v.connect(vg); vg.connect(o.frequency); og.gain.value=.14; o.connect(og); nodes.forEach(f=>og.connect(f)); o.start(); v.start(); os.push(o,v); }
+    const sw=c.createOscillator(), sg=c.createGain(); sw.frequency.value=.12; sg.gain.value=.02; sw.connect(sg); sg.connect(out.gain); sw.start(); os.push(sw);
+    SND.crowd={os,out}; }
+  else if((!on||!soundOn())&&SND.crowd){ SND.crowd.os.forEach(o=>{ try{ o.stop(); }catch(e){} }); try{ SND.crowd.out.disconnect(); }catch(e){} SND.crowd=null; } }
 document.addEventListener('pointerdown',()=>{ const c=audio(); if(c&&c.state==='suspended') c.resume(); crowdAmb(!$('gameScreen').hidden); },{passive:true});
 
 /* ---------- UI ---------- */
