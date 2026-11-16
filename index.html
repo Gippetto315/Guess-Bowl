@@ -985,7 +985,7 @@ function skipAnim(){ if(!anim) return; anim=null; animY=S.y; kickPre=0;
   for(let i=fq.length-1;i>=0;i--) if(!/FINAL|HALFTIME/.test(fq[i][0])) fq.splice(i,1);
   if(fCur&&!/FINAL|HALFTIME/.test(fCur[0])){ clearTimeout(fT); fBusy=false; fCur=null; $('flash').classList.remove('show'); }
   if(bnPend){ const q=bnPend; bnPend=null; showBanner(q[0],q[1],q[2]); } bnTok++;
-  if(rPend) render(); }
+  S.dYou=S.you; S.dCpu=S.cpu; rPend=0; render(); }
 function tap(n){
   if(anim&&anim.legs.some(l=>!l.enter)){ skipAnim(); if(S.phase!=='guess') return; }
   sfx.click();
