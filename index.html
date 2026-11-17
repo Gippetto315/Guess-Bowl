@@ -2011,6 +2011,7 @@ function flash(word,sub,tone,fn){
   if(fCur&&fCur[4]<fGen&&!keep(fCur)&&fBusy){ clearTimeout(fT); fBusy=false; fCur=null; $('flash').classList.remove('show'); }
   // PERFECT! is about your tap, not the play that follows (punt, kick, return), so it shows right away and goes first.
   if(tone==='perf'){ fq.unshift([word,sub,tone,fn,fGen]); if(!fBusy){ fBusy=true; fT=setTimeout(nextFlash,60); } return; }
+  if(!fn&&!keep([word])&&fq.filter(q=>q[4]===fGen&&!q[3]&&q[2]!=='perf'&&!keep(q)).length+(fCur&&fCur[4]===fGen&&!fCur[3]?1:0)>=2) return;
   fq.push([word,sub,tone,fn,fGen]); if(!fBusy){ fBusy=true; fT=setTimeout(nextFlash,flashDelay); } flashDelay=350; }
 function bump(id,key,val,plus){ S[key]=val; const el=$(id); el.textContent=val; el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
   const f=document.createElement('span'); f.className='plus'; f.textContent='+'+plus; el.parentNode.appendChild(f); setTimeout(()=>f.remove(),1400); }
@@ -2028,9 +2029,12 @@ function nextFlash(){
   else if(/FIELD GOAL|IT'S GOOD|EXTRA POINT|2-POINT|SAFETY/.test(w)) fans(it[2]==='cpu'?'cpu':'you','score');
   else if(/^(SACK!|INTERCEPTION!|STUFFED!)$/.test(w)){ fans('you','play'); sfx.whistle(); }
   else if(/SACKED|TACKLE FOR LOSS|BIG PLAY/.test(w)) fans(it[2]==='gold'?'you':'cpu','play');
-  fT=setTimeout(nextFlash,it[3]?2550:lng?3000:pf?2000:1900);
+  fT=setTimeout(nextFlash,it[3]?2100:pf?1700:1400);
 }
-function flashCheck(){ fGen++;
+function purgeStale(){ const keep=it=>/FINAL|HALFTIME/.test(it[0]);
+  for(let i=fq.length-1;i>=0;i--) if(fq[i][4]<fGen&&!keep(fq[i])){ const it=fq.splice(i,1)[0]; if(it[3]) it[3](); }
+  if(fCur&&fCur[4]<fGen&&!keep(fCur)&&fBusy){ clearTimeout(fT); fBusy=false; fCur=null; $('flash').classList.remove('show'); } }
+function flashCheck(){ fGen++; purgeStale();
   S.pf.splice(0).forEach(f=>flash(...f));
   const cur={poss:S.poss,down:S.down,ser:S.ser,you:S.you,cpu:S.cpu,over:S.over,kickPend:!!(S.needKick||S.phase==='pat')}, L=lastSeen; lastSeen=cur;
   if(!L) return flash('KICKOFF','You receive','gold');
