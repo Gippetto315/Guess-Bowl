@@ -2045,10 +2045,12 @@ function flashCheck(){ fGen++; purgeStale();
   if(dc>0) flash(S.tagCpu==='fg'?'FIELD GOAL':S.tagCpu==='safety'?'SAFETY':S.tagCpu==='xp'?'EXTRA POINT':S.tagCpu==='two'?'2-POINT GOOD':'TOUCHDOWN',S.tagCpu==='fg'?S.fgDist+' yards · '+S.opp+' +3':S.opp+' +'+dc,'cpu',bc);
   if(cur.over && !L.over) return flash('FINAL',S.you+' – '+S.cpu,'gold');
   if(cur.over) return;
+  const had=fq.some(q=>q[4]===fGen&&q[2]!=='perf')||(fCur&&fCur[4]===fGen&&fBusy);
   if(S.phase==='pat'||S.needKick){ if(S.needKick && !L.kickPend) flash('KICKOFF',S.needKick==='you'?'You kick':'You receive','gold'); }
+  else if(had&&!(cur.ser!==L.ser&&cur.down===1)) return;
   else if(cur.poss!==L.poss||L.kickPend) flash(cur.poss==='you'?'OFFENSE':'DEFENSE',cur.poss==='you'?'Your ball':'Stop them',cur.poss);
   else if(cur.ser!==L.ser && cur.down===1) flash(cur.poss==='you'?'FIRST DOWN!':'THEIR 1ST DOWN',ddText(),cur.poss==='you'?'gold':'cpu');
-  else if(cur.down!==L.down) flash(ORD[cur.down-1].toUpperCase()+' DOWN',ddText(),cur.down===4?'gold':cur.poss);
+  /* no "Nth down" banner: it describes the next play, and the strip above the field already shows it */
 }
 
 /* ---------- Field ---------- */
