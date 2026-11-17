@@ -1017,7 +1017,7 @@ function tap(n){
     else { S.st.tod++; notes.push('Turnover on downs. It was '+r.secret+'.'); if(d) S.pf.push(['STOPPED SHORT','Turnover on downs','cpu']); cpuBall(ny); }
   } else if(S.mode==='off'){
     if(d===0){
-      const gain=snowy(yds(r.secret));
+      let gain=snowy(yds(r.secret)); if(S.down===1&&rf()<.2) gain=100-S.y; // nail it on 1st down: a chance it goes the distance
       S.st.hits++; if(r.secret<=3||r.secret>=23) S.st.edge=(S.st.edge||0)+1; S.st.hitDown+=S.down; S.st.long=Math.max(S.st.long,gain); S.st.yds+=gain;
       num=r.secret; title=gain>=30?'HOUSE CALL!':gain>=20?'BIG PLAY!':gain>=13?'NICE GAIN':'MOVED THE CHAINS';
       notes.push('Perfect call. +'+gain+' yds.');
@@ -1041,7 +1041,7 @@ function tap(n){
   } else {
     if(d===0){
       num=r.secret;
-      if(S.down<=2){ S.st.take++; title='PICKED OFF!'; S.pf.push(['INTERCEPTION!','You jumped the route','gold']); notes.push('You jumped the route. Your ball.'); S.fx='int'; youBall(S.y); }
+      if(S.down<=2){ S.st.take++; title='PICKED OFF!'; S.pf.push(['INTERCEPTION!','You jumped the route','gold']); notes.push('You jumped the route. Your ball.'); S.fx='int'; if(S.down===1&&rf()<.2){ S.fx=null; S.pf[S.pf.length-1][1]='PICK SIX!'; title='PICK SIX!'; notes.push('And he is gone, all the way back!'); youTD(notes); } else youBall(S.y); }
       else if(S.down===3){ S.st.sacks++; title='SACK!'; S.pf.push(['SACK!','They lose 7','gold']); notes.push('They lose 7.'); S.y=Math.min(99,S.y+7); S.down++; S.togo+=7; newSeries(); }
       else { S.st.take++; title='STOPPED!'; S.pf.push(['STUFFED!','Turnover on downs','gold']); notes.push('Turnover on downs. Your ball.'); youBall(S.y); }
     } else if(S.down===4){
@@ -2031,7 +2031,7 @@ function nextFlash(){
   else if(/SACKED|TACKLE FOR LOSS|BIG PLAY/.test(w)) fans(it[2]==='gold'?'you':'cpu','play');
   fT=setTimeout(nextFlash,it[3]?2100:pf?1700:1400);
 }
-function purgeStale(){ const keep=it=>/FINAL|HALFTIME/.test(it[0]);
+function purgeStale(){ const keep=it=>/FINAL|HALFTIME/.test(it[0])||it[5];
   for(let i=fq.length-1;i>=0;i--) if(fq[i][4]<fGen&&!keep(fq[i])){ const it=fq.splice(i,1)[0]; if(it[3]) it[3](); }
   if(fCur&&fCur[4]<fGen&&!keep(fCur)&&fBusy){ clearTimeout(fT); fBusy=false; fCur=null; $('flash').classList.remove('show'); } }
 function flashCheck(){ fGen++; purgeStale();
@@ -2097,7 +2097,13 @@ function animate(a,b){
   { // Turnovers: show the throw being picked off (or the ball coming out), with the team that had the ball still shown as the offense.
     const fx=fx0, d0=playDur(a,b), d=fx==='int'?Math.max(5600,d0):fx==='fum'?Math.max(4600,d0):d0, o=S.poss==='you'?'cpu':'you';
     const lg=fx?{a,b,dur:d,play:1,fx,poss:o,pre:1}:{a,b,dur:d,play:1};
-    if(fx==='int'||fx==='fum'){ lg.pl=mkPlay(lg,o==='you'?1:-1); flashDelay=Math.round(d*lg.pl.tc); releaseBanner(flashDelay); }
+    if(fx==='int'||fx==='fum'){ lg.pl=mkPlay(lg,o==='you'?1:-1); flashDelay=Math.round(d*lg.pl.tc); releaseBanner(flashDelay);
+      // The turnover banner fires the instant the ball is picked off / comes loose, not when the play is over.
+      const pk=S.pf.splice(0).filter(q=>{ if(/INTERCEPTION|FUMBLE/.test(q[0])) return true; S.pf.push(q); return false; });
+      if(pk.length){ const tk=bnTok; setTimeout(()=>{ if(tk!==bnTok) return;
+        clearTimeout(fT); fBusy=true; fCur=null; $('flash').classList.remove('show');
+        for(let i=fq.length-1;i>=0;i--) if(!/FINAL|HALFTIME/.test(fq[i][0])) fq.splice(i,1);
+        pk.slice().reverse().forEach(q=>fq.unshift([q[0],q[1],q[2],undefined,fGen,1])); fT=setTimeout(nextFlash,0); },flashDelay); } }
     if(!fx){ flashDelay=Math.round(d*.86); releaseBanner(flashDelay); } // the result banner waits for the tackle, so the whole play can be watched
     anim={i:0,t0:performance.now(),legs:[lg]}; }
 }
@@ -2229,7 +2235,9 @@ function loop(t){
     else { animY=L.a+(L.b-L.a)*e; moving=k<1 && (L.a!==L.b || !!L.enter); } enterK=L.enter?k:1;
     if(L.party && !L.fired){ L.fired=1; burst(L.b); }
     if(L.kick && !L.landed && !L.thud){ L.thud=1; sfx.thump(); }
-    if(k>=1){ anim.i++; anim.t0=t; if(anim.i>=anim.legs.length){ anim=null; if(rPend) render(); } } }
+    if(k>=1){ anim.i++; anim.t0=t;
+      if(anim.i>=anim.legs.length){ anim=null; if(rPend){ flashDelay=150; render(); } }
+      else if(rPend){ const nl=anim.legs[anim.i]; if(nl.party||nl.enter||nl.landed){ flashDelay=150; rPend=0; renderNow(); } } } }
   if(S && !$('gameScreen').hidden) draw(animY,t);
   requestAnimationFrame(loop);
 }
